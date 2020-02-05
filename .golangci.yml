@@ -1,0 +1,22 @@
+linters:
+  enable:
+    - dupl
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - goimports
+    - golint
+    - gosec
+    - interfacer
+    - lll
+    - scopelint
+    - unconvert
+    - unparam
+    - wsl
+linter-settings:
+  errcheck:
+    check-type-assertions: true
+  goimports:
+    local-prefixes: github.com/kudobuilder/test-tools
