@@ -2,7 +2,6 @@ package kudo
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
@@ -68,10 +67,6 @@ func (instance Instance) WaitForPlanStatus(
 	ticker *time.Ticker,
 	plan string,
 	status kudov1beta1.ExecutionStatus) error {
-	if _, ok := instance.Status.PlanStatus[plan]; !ok {
-		return fmt.Errorf("plan %s not found", plan)
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -79,6 +74,12 @@ func (instance Instance) WaitForPlanStatus(
 		case <-ticker.C:
 			if err := instance.Update(); err != nil {
 				return err
+			}
+
+			if _, ok := instance.Status.PlanStatus[plan]; !ok {
+				// The plan may not have been in use before.
+				// We continue, assuming that the plan name is valid and present in OperatorVersion.
+				continue
 			}
 
 			planStatus := instance.Status.PlanStatus[plan]
