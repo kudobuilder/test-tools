@@ -12,4 +12,4 @@ if ! "$GOBIN/golangci-lint" --version 2>/dev/null | grep -q "$GOLANGCILINT_VERSI
         | sh -s -- -b "$GOBIN" "v${GOLANGCILINT_VERSION}"
 fi
 
-"$GOBIN/golangci-lint" run
+"$GOBIN/golangci-lint" run --timeout 5m
