@@ -1,9 +1,13 @@
 .PHONY: test
-test:
+test: generate
 	@./scripts/test.sh
 
+.PHONY: generate
+generate:
+	@./scripts/generate.sh
+
 .PHONY: lint
-lint:
+lint: generate
 	@./scripts/lint.sh
 
 .PHONY: clean

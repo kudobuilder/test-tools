@@ -6,58 +6,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 
-	"github.com/kudobuilder/test-tools/pkg/client"
 	"github.com/kudobuilder/test-tools/pkg/cmd"
 )
 
-// Pod wraps a Kubernetes Pod.
-type Pod struct {
-	corev1.Pod
-
-	client client.Client
-}
-
-// GetPod gets a pod in a namespace.
-func GetPod(client client.Client, name string, namespace string) (Pod, error) {
-	options := metav1.GetOptions{}
-
-	pod, err := client.Kubernetes.
-		CoreV1().
-		Pods(namespace).
-		Get(name, options)
-	if err != nil {
-		return Pod{}, err
-	}
-
-	return Pod{
-		Pod:    *pod,
-		client: client,
-	}, nil
-}
-
-// ListPods lists all pods in a namespace.
-func ListPods(client client.Client, namespace string) ([]Pod, error) {
-	options := metav1.ListOptions{}
-
-	podList, err := client.Kubernetes.
-		CoreV1().
-		Pods(namespace).
-		List(options)
-	if err != nil {
-		return nil, err
-	}
-
-	pods := make([]Pod, 0, len(podList.Items))
-
-	for _, item := range podList.Items {
-		pods = append(pods, Pod{
-			Pod:    item,
-			client: client,
-		})
-	}
-
-	return pods, nil
-}
+//go:generate go run ../../internal/gen -api CoreV1 -type Pod
 
 // Logs returns the (current) logs of a pod's container.
 func (pod Pod) ContainerLogs(container string) ([]byte, error) {
