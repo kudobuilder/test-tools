@@ -1,3 +1,3 @@
 package kubernetes
 
-//go:generate go run ../../internal/gen -api CoreV1 -type PersistentVolumeClaim
+//go:generate stub-gen -api CoreV1 -type PersistentVolumeClaim

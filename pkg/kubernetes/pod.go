@@ -8,7 +8,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/cmd"
 )
 
-//go:generate go run ../../internal/gen -api CoreV1 -type Pod
+//go:generate stub-gen -api CoreV1 -type Pod
 
 // Logs returns the (current) logs of a pod's container.
 func (pod Pod) ContainerLogs(container string) ([]byte, error) {
