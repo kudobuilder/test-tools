@@ -1,3 +1,4 @@
+// Package client implements wrappers for Kubernetes and KUDO interfaces.
 package client
 
 import (

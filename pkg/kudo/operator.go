@@ -72,7 +72,7 @@ type OperatorBuilder struct {
 
 // InstallOperator installs a KUDO operator package.
 // Additional parameters can be added to this call. The installation
-// is started by calling `Do`.
+// is started by calling 'Do'.
 //   operator, err := kudo.InstallOperator("kafka").
 //   	WithNamespace("kafka").
 //   	WithInstance("kafka-instance").
