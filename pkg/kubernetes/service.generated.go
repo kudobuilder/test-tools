@@ -84,3 +84,20 @@ func (service Service) Delete() error {
 		Services(service.Namespace).
 		Delete(service.Name, &options)
 }
+
+// Update gets the current Service status.
+func (service *Service) Update() error {
+	options := metav1.GetOptions{}
+
+	update, err := service.client.Kubernetes.
+		CoreV1().
+		Services(service.Namespace).
+		Get(service.Name, options)
+	if err != nil {
+		return err
+	}
+
+	service.Service = *update
+
+	return nil
+}

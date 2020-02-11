@@ -84,3 +84,20 @@ func (pod Pod) Delete() error {
 		Pods(pod.Namespace).
 		Delete(pod.Name, &options)
 }
+
+// Update gets the current Pod status.
+func (pod *Pod) Update() error {
+	options := metav1.GetOptions{}
+
+	update, err := pod.client.Kubernetes.
+		CoreV1().
+		Pods(pod.Namespace).
+		Get(pod.Name, options)
+	if err != nil {
+		return err
+	}
+
+	pod.Pod = *update
+
+	return nil
+}

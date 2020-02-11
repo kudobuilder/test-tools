@@ -84,3 +84,20 @@ func (secret Secret) Delete() error {
 		Secrets(secret.Namespace).
 		Delete(secret.Name, &options)
 }
+
+// Update gets the current Secret status.
+func (secret *Secret) Update() error {
+	options := metav1.GetOptions{}
+
+	update, err := secret.client.Kubernetes.
+		CoreV1().
+		Secrets(secret.Namespace).
+		Get(secret.Name, options)
+	if err != nil {
+		return err
+	}
+
+	secret.Secret = *update
+
+	return nil
+}

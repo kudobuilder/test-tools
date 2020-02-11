@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 
@@ -61,21 +60,4 @@ func (pod Pod) ContainerExec(container string, command cmd.Builder) error {
 		Stderr: command.Stderr,
 		Tty:    false,
 	})
-}
-
-// Update gets the current Pod status.
-func (pod *Pod) Update() error {
-	options := metav1.GetOptions{}
-
-	update, err := pod.client.Kubernetes.
-		CoreV1().
-		Pods(pod.Namespace).
-		Get(pod.Name, options)
-	if err != nil {
-		return err
-	}
-
-	pod.Pod = *update
-
-	return nil
 }

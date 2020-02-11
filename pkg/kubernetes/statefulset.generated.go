@@ -84,3 +84,20 @@ func (statefulset StatefulSet) Delete() error {
 		StatefulSets(statefulset.Namespace).
 		Delete(statefulset.Name, &options)
 }
+
+// Update gets the current StatefulSet status.
+func (statefulset *StatefulSet) Update() error {
+	options := metav1.GetOptions{}
+
+	update, err := statefulset.client.Kubernetes.
+		AppsV1().
+		StatefulSets(statefulset.Namespace).
+		Get(statefulset.Name, options)
+	if err != nil {
+		return err
+	}
+
+	statefulset.StatefulSet = *update
+
+	return nil
+}
