@@ -7,4 +7,6 @@ set -o pipefail
 # shellcheck source=scripts/config.sh
 source "$(dirname "$0")/config.sh"
 
+go install ./internal/stub-gen
+
 go generate ./...

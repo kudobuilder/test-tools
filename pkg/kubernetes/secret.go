@@ -7,7 +7,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-//go:generate go run ../../internal/gen -api CoreV1 -type Secret
+//go:generate stub-gen -api CoreV1 -type Secret
 
 // SecretBuilder tracks the options set for a secret.
 type SecretBuilder struct {
