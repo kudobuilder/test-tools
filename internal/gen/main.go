@@ -96,6 +96,23 @@ func ({{ .Type | toLower }} {{ .Type }}) Delete() error {
 		{{ .Type }}s({{ .Type | toLower }}.Namespace).
 		Delete({{ .Type | toLower }}.Name, &options)
 }
+
+// Update gets the current {{ .Type }} status.
+func ({{ .Type | toLower }} *{{ .Type }}) Update() error {
+	options := metav1.GetOptions{}
+
+	update, err := {{ .Type | toLower }}.client.Kubernetes.
+		{{ .API }}().
+		{{ .Type }}s({{ .Type | toLower }}.Namespace).
+		Get({{ .Type | toLower }}.Name, options)
+	if err != nil {
+		return err
+	}
+
+	{{ .Type | toLower }}.{{ .Type }} = *update
+
+	return nil
+}
 `
 
 type Parameters struct {
