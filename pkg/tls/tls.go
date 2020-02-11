@@ -1,3 +1,4 @@
+// Package tls implements helpers for TLS certificates.
 package tls
 
 import (
@@ -17,30 +18,37 @@ import (
 
 const rsaBits = 2048
 
+// CertSecretBuilder tracks the options set for a cert secret.
 type CertSecretBuilder struct {
 	Name       string
 	Namespace  string
 	CommonName string
 }
 
+// CreateCertSecret creates a secret containing a self-signed certificate and key.
+// Additional parameters can be added to this call. The creation is started by
+// calling 'Do'.
 func CreateCertSecret(name string) CertSecretBuilder {
 	return CertSecretBuilder{
 		Name: name,
 	}
 }
 
+// WithNamespace sets the namespace in which the secret will be created.
 func (builder CertSecretBuilder) WithNamespace(namespace string) CertSecretBuilder {
 	builder.Namespace = namespace
 
 	return builder
 }
 
+// WithCommonName sets the common name of the certificate.
 func (builder CertSecretBuilder) WithCommonName(commonName string) CertSecretBuilder {
 	builder.CommonName = commonName
 
 	return builder
 }
 
+// Do creates the certificate secret.
 func (builder CertSecretBuilder) Do(client client.Client) (kubernetes.Secret, error) {
 	signingPriv, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
