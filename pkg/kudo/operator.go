@@ -1,6 +1,8 @@
 package kudo
 
 import (
+	"fmt"
+
 	"github.com/Masterminds/semver"
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/resolver"
@@ -29,7 +31,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 		Instances(namespace).
 		Get(instance, options)
 	if err != nil {
-		return Operator{}, err
+		return Operator{}, fmt.Errorf("failed to get Instance %s in namespace %s: %w", instance, namespace, err)
 	}
 
 	ov, err := client.Kudo.
@@ -37,7 +39,8 @@ func newOperator(client client.Client, name string, instance string, namespace s
 		OperatorVersions(namespace).
 		Get(i.Spec.OperatorVersion.Name, options)
 	if err != nil {
-		return Operator{}, err
+		return Operator{}, fmt.Errorf(
+			"failed to get OperatorVersion %s in namespace %s: %w", i.Spec.OperatorVersion.Name, namespace, err)
 	}
 
 	o, err := client.Kudo.
@@ -45,7 +48,8 @@ func newOperator(client client.Client, name string, instance string, namespace s
 		Operators(namespace).
 		Get(ov.Spec.Operator.Name, options)
 	if err != nil {
-		return Operator{}, err
+		return Operator{}, fmt.Errorf(
+			"failed to get Operator %s in namespace %s: %w", ov.Spec.Operator.Name, namespace, err)
 	}
 
 	return Operator{
@@ -123,7 +127,7 @@ func (builder OperatorBuilder) WithParameters(parameters map[string]string) Oper
 func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 	repository, err := repo.NewClient(repo.Default)
 	if err != nil {
-		return Operator{}, err
+		return Operator{}, fmt.Errorf("failed to create repository client: %w", err)
 	}
 
 	r := resolver.New(repository)
@@ -140,7 +144,7 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 
 	pkg, err := r.Resolve(builder.Name, appVersion, operatorVersion)
 	if err != nil {
-		return Operator{}, err
+		return Operator{}, fmt.Errorf("failed to resolve operator %s: %w", builder.Name, err)
 	}
 
 	kudoClient := kudooperator.NewClientFromK8s(client.Kudo)
@@ -153,7 +157,7 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 		builder.Namespace,
 		builder.Parameters)
 	if err != nil {
-		return Operator{}, err
+		return Operator{}, fmt.Errorf("failed to install operator %s: %w", builder.Name, err)
 	}
 
 	return newOperator(client, builder.Name, builder.Instance, builder.Namespace)
@@ -171,7 +175,11 @@ func (operator Operator) Uninstall() error {
 		Instances(operator.Instance.Namespace).
 		Delete(operator.Instance.Name, &options)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to delete Instance %s in namespace %s: %w",
+			operator.Instance.Name,
+			operator.Instance.Namespace,
+			err)
 	}
 
 	err = operator.client.Kudo.
@@ -179,7 +187,11 @@ func (operator Operator) Uninstall() error {
 		OperatorVersions(operator.OperatorVersion.Namespace).
 		Delete(operator.OperatorVersion.Name, &options)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to delete OperatorVersion %s in namespace %s: %w",
+			operator.OperatorVersion.Name,
+			operator.OperatorVersion.Namespace,
+			err)
 	}
 
 	err = operator.client.Kudo.
@@ -187,7 +199,11 @@ func (operator Operator) Uninstall() error {
 		Operators(operator.Operator.Namespace).
 		Delete(operator.Operator.Name, &options)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to delete Operator %s in namespace %s: %w",
+			operator.Operator.Name,
+			operator.Operator.Namespace,
+			err)
 	}
 
 	return nil
@@ -233,7 +249,7 @@ func (builder UpgradeBuilder) WithParameters(parameters map[string]string) Upgra
 func (builder UpgradeBuilder) Do(operator *Operator) error {
 	repository, err := repo.NewClient(repo.Default)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create repository client: %w", err)
 	}
 
 	r := resolver.New(repository)
@@ -255,7 +271,7 @@ func (builder UpgradeBuilder) Do(operator *Operator) error {
 
 	pkg, err := r.Resolve(name, appVersion, operatorVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to resolve operator %s: %w", name, err)
 	}
 
 	kudoClient := kudooperator.NewClientFromK8s(operator.client.Kudo)
@@ -267,7 +283,11 @@ func (builder UpgradeBuilder) Do(operator *Operator) error {
 		operator.Instance.Namespace,
 		builder.Parameters)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to upgrade OperatorVersion for Instance %s in namespace %s: %w",
+			operator.Instance.Name,
+			operator.Instance.Namespace,
+			err)
 	}
 
 	newOperator, err := newOperator(

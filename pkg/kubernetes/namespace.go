@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -20,7 +22,11 @@ func CreateNamespace(client client.Client, name string) error {
 		Namespaces().
 		Create(&namespace)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create namespace %s: %w", name, err)
+	}
+
+	return nil
 }
 
 // DeleteNamespace deletes a namespace.
@@ -32,5 +38,9 @@ func DeleteNamespace(client client.Client, name string) error {
 		Namespaces().
 		Delete(name, &options)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to delete namespace %s: %w", name, err)
+	}
+
+	return nil
 }

@@ -2,6 +2,8 @@ package kudo
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
@@ -26,7 +28,7 @@ func GetInstance(client client.Client, name string, namespace string) (Instance,
 		Instances(namespace).
 		Get(name, options)
 	if err != nil {
-		return Instance{}, err
+		return Instance{}, fmt.Errorf("failed to get Instance %s in namespace %s: %w", name, namespace, err)
 	}
 
 	return Instance{
@@ -44,7 +46,7 @@ func ListInstances(client client.Client, namespace string) ([]Instance, error) {
 		Instances(namespace).
 		List(options)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list Instances in namespace %s: %w", namespace, err)
 	}
 
 	instances := make([]Instance, 0, len(instanceList.Items))
@@ -59,6 +61,16 @@ func ListInstances(client client.Client, namespace string) ([]Instance, error) {
 	return instances, nil
 }
 
+func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.ExecutionStatus, string) {
+	if _, ok := instance.Status.PlanStatus[plan]; !ok {
+		// The plan may not have been in use before.
+		// We continue, assuming that the plan name is valid and present in OperatorVersion.
+		return kudov1beta1.ExecutionNeverRun, ""
+	}
+
+	return instance.Status.PlanStatus[plan].Status, instance.Status.PlanStatus[plan].Message
+}
+
 // WaitForStatus waits for an instance plan status to reach a status.
 // A ticker polls the current instance status until the desired status is reached for a specific plan.
 // A context can abort the polling.
@@ -70,20 +82,27 @@ func (instance Instance) WaitForPlanStatus(
 	for {
 		select {
 		case <-ctx.Done():
+			err := ctx.Err()
+			if errors.Is(err, context.DeadlineExceeded) {
+				currentStatus, message := currentPlanStatusAndMessage(instance, plan)
+
+				return PlanStatusTimeout{
+					Plan:           plan,
+					ExpectedStatus: status,
+					ActualStatus:   currentStatus,
+					Message:        message,
+				}
+			}
+
 			return ctx.Err()
 		case <-ticker.C:
 			if err := instance.Update(); err != nil {
 				return err
 			}
 
-			if _, ok := instance.Status.PlanStatus[plan]; !ok {
-				// The plan may not have been in use before.
-				// We continue, assuming that the plan name is valid and present in OperatorVersion.
-				continue
-			}
+			currentStatus, _ := currentPlanStatusAndMessage(instance, plan)
 
-			planStatus := instance.Status.PlanStatus[plan]
-			if planStatus.Status == status {
+			if currentStatus == status {
 				return nil
 			}
 		}
@@ -144,7 +163,7 @@ func (instance *Instance) Update() error {
 		Instances(instance.Namespace).
 		Get(instance.Name, options)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update Instance %s in namespace %s: %w", instance.Name, instance.Namespace, err)
 	}
 
 	instance.Instance = *update
@@ -175,7 +194,11 @@ func (instance *Instance) UpdateParameters(parameters map[string]string) error {
 		Instances(instance.Namespace).
 		Update(&current)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to update parameters of Instance %s in namespace %s: %w",
+			instance.Name,
+			instance.Namespace,
+			err)
 	}
 
 	instance.Instance = *updated
