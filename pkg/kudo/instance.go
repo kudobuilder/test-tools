@@ -90,8 +90,22 @@ func (instance Instance) WaitForPlanStatus(
 	}
 }
 
-// WaitForDeployInProgress waits up to 30 seconds for an instance plan status to be in progress.
-func (instance Instance) WaitForPlanInProgress(plan string) error {
+// WaitConfig is used to configure instance wait calls.
+type WaitConfig struct {
+	Timeout time.Duration
+}
+
+// WaitForDeployInProgress waits for an instance plan status to be in progress.
+// By default it waits for 30 seconds unless overridden with a WaitTimeout.
+func (instance Instance) WaitForPlanInProgress(plan string, options ...WaitOption) error {
+	config := WaitConfig{
+		Timeout: time.Second * 30,
+	}
+
+	for _, option := range options {
+		option(&config)
+	}
+
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*30)
 	defer cancel()
 
@@ -102,7 +116,16 @@ func (instance Instance) WaitForPlanInProgress(plan string) error {
 }
 
 // WaitForDeployComplete waits up to 5 minutes for an instance plan status to be completed.
-func (instance Instance) WaitForPlanComplete(plan string) error {
+// By default it waits for 5 minutes unless overridden with a WaitTimeout.
+func (instance Instance) WaitForPlanComplete(plan string, options ...WaitOption) error {
+	config := WaitConfig{
+		Timeout: time.Minute * 5,
+	}
+
+	for _, option := range options {
+		option(&config)
+	}
+
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute*5)
 	defer cancel()
 
