@@ -11,14 +11,16 @@ type PlanStatusTimeout struct {
 	Plan           string
 	ExpectedStatus kudov1beta1.ExecutionStatus
 	ActualStatus   kudov1beta1.ExecutionStatus
+	Message        string
 }
 
 func (p PlanStatusTimeout) Error() string {
 	return fmt.Sprintf(
-		"timed out waiting for plan %s to have %s status; current plan status is %s",
+		"timed out waiting for plan %s to have %s status; current plan status is %s with message \"%s\"",
 		p.Plan,
 		p.ExpectedStatus,
-		p.ActualStatus)
+		p.ActualStatus,
+		p.Message)
 }
 
 func (PlanStatusTimeout) Timeout() bool   { return true }

@@ -61,14 +61,14 @@ func ListInstances(client client.Client, namespace string) ([]Instance, error) {
 	return instances, nil
 }
 
-func currentPlanStatus(instance Instance, plan string) kudov1beta1.ExecutionStatus {
+func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.ExecutionStatus, string) {
 	if _, ok := instance.Status.PlanStatus[plan]; !ok {
 		// The plan may not have been in use before.
 		// We continue, assuming that the plan name is valid and present in OperatorVersion.
-		return kudov1beta1.ExecutionNeverRun
+		return kudov1beta1.ExecutionNeverRun, ""
 	}
 
-	return instance.Status.PlanStatus[plan].Status
+	return instance.Status.PlanStatus[plan].Status, instance.Status.PlanStatus[plan].Message
 }
 
 // WaitForStatus waits for an instance plan status to reach a status.
@@ -84,10 +84,13 @@ func (instance Instance) WaitForPlanStatus(
 		case <-ctx.Done():
 			err := ctx.Err()
 			if errors.Is(err, context.DeadlineExceeded) {
+				currentStatus, message := currentPlanStatusAndMessage(instance, plan)
+
 				return PlanStatusTimeout{
 					Plan:           plan,
 					ExpectedStatus: status,
-					ActualStatus:   currentPlanStatus(instance, plan),
+					ActualStatus:   currentStatus,
+					Message:        message,
 				}
 			}
 
@@ -97,7 +100,9 @@ func (instance Instance) WaitForPlanStatus(
 				return err
 			}
 
-			if currentPlanStatus(instance, plan) == status {
+			currentStatus, _ := currentPlanStatusAndMessage(instance, plan)
+
+			if currentStatus == status {
 				return nil
 			}
 		}
