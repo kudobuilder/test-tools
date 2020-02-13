@@ -2,6 +2,7 @@ package kudo
 
 import (
 	"testing"
+	"time"
 
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
 	"github.com/kudobuilder/kudo/pkg/client/clientset/versioned/fake"
@@ -35,4 +36,28 @@ func TestInstances(t *testing.T) {
 	instances, err := ListInstances(client, namespace)
 	assert.NoError(t, err)
 	assert.Contains(t, instances, instance)
+}
+
+func TestWaitTimeout(t *testing.T) {
+	const namespace = "test"
+
+	testInstance := kudov1beta1.Instance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-instance",
+			Namespace: namespace,
+		},
+	}
+
+	client := client.Client{
+		Kudo: fake.NewSimpleClientset(testInstance.DeepCopyObject()),
+	}
+
+	instance, err := GetInstance(client, testInstance.Name, namespace)
+	assert.NoError(t, err)
+
+	deadline := time.Now().Add(time.Second)
+
+	err = instance.WaitForPlanComplete("deploy", WaitTimeout(time.Millisecond*1))
+	assert.EqualError(t, err, "context deadline exceeded")
+	assert.True(t, time.Now().Before(deadline))
 }

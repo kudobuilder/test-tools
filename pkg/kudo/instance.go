@@ -106,7 +106,7 @@ func (instance Instance) WaitForPlanInProgress(plan string, options ...WaitOptio
 		option(&config)
 	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.TODO(), config.Timeout)
 	defer cancel()
 
 	ticker := time.NewTicker(time.Second * 3)
@@ -126,7 +126,7 @@ func (instance Instance) WaitForPlanComplete(plan string, options ...WaitOption)
 		option(&config)
 	}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute*5)
+	ctx, cancel := context.WithTimeout(context.TODO(), config.Timeout)
 	defer cancel()
 
 	ticker := time.NewTicker(time.Second * 10)
