@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -23,7 +25,7 @@ func (pod Pod) ContainerLogs(container string) ([]byte, error) {
 		Do()
 
 	if result.Error() != nil {
-		return []byte{}, result.Error()
+		return []byte{}, fmt.Errorf("failed to get logs of container %s: %w", container, result.Error())
 	}
 
 	return result.Raw()
@@ -51,7 +53,7 @@ func (pod Pod) ContainerExec(container string, command cmd.Builder) error {
 
 	exec, err := remotecommand.NewSPDYExecutor(&pod.client.Config, "POST", req.URL())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to execute \"%s\" in container %s: %w", command.Command, container, err)
 	}
 
 	return exec.Stream(remotecommand.StreamOptions{
