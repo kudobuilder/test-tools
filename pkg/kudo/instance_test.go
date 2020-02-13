@@ -58,6 +58,6 @@ func TestWaitTimeout(t *testing.T) {
 	deadline := time.Now().Add(time.Second)
 
 	err = instance.WaitForPlanComplete("deploy", WaitTimeout(time.Millisecond*1))
-	assert.EqualError(t, err, "context deadline exceeded")
+	assert.EqualError(t, err, "timed out waiting for plan deploy to have COMPLETE status; current plan status is NEVER_RUN with message \"\"") //nolint:lll
 	assert.True(t, time.Now().Before(deadline))
 }
