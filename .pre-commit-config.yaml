@@ -1,0 +1,19 @@
+# Git hooks for test-tools. Install with
+# pre-commit install -t pre-commit -t commit-msg
+repos:
+  - repo: local
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        description: Check that source code is linted
+        entry: make lint
+        language: system
+        stages: [commit]
+  - repo: local
+    hooks:
+      - id: signed-off-commits
+        name: signed-off-commits
+        description: Check that commit messages include a 'Signed-off-by' line
+        entry: ./scripts/check-commit-sign-off.sh
+        language: script
+        stages: [commit-msg]
