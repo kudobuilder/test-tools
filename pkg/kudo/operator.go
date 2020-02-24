@@ -168,6 +168,10 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 // We assume that this is the intended behavior for most test cases.
 // Don't use this for test cases which have multiple Instances for a single OperatorVersion.
 func (operator Operator) Uninstall() error {
+	if operator.client.Kudo == nil {
+		return fmt.Errorf("operator is not initialized")
+	}
+
 	options := metav1.DeleteOptions{}
 
 	err := operator.client.Kudo.
