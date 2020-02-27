@@ -40,7 +40,7 @@ func (builder SecretBuilder) WithData(data map[string][]byte) SecretBuilder {
 	return builder
 }
 
-// WithData sets the data the secret should hold as string
+// WithStringData sets the data the secret should hold as string
 func (builder SecretBuilder) WithStringData(data map[string]string) SecretBuilder {
 	builder.StringData = data
 
