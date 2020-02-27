@@ -11,9 +11,10 @@ import (
 
 // SecretBuilder tracks the options set for a secret.
 type SecretBuilder struct {
-	Name      string
-	Namespace string
-	Data      map[string][]byte
+	Name       string
+	Namespace  string
+	Data       map[string][]byte
+	StringData map[string]string
 }
 
 // CreateSecret creates a secret.
@@ -39,6 +40,13 @@ func (builder SecretBuilder) WithData(data map[string][]byte) SecretBuilder {
 	return builder
 }
 
+// WithStringData sets the data the secret should hold as string
+func (builder SecretBuilder) WithStringData(data map[string]string) SecretBuilder {
+	builder.StringData = data
+
+	return builder
+}
+
 // Do creates the secret in the cluster.
 func (builder SecretBuilder) Do(client client.Client) (Secret, error) {
 	secret := corev1.Secret{
@@ -47,7 +55,8 @@ func (builder SecretBuilder) Do(client client.Client) (Secret, error) {
 			Namespace: builder.Namespace,
 		},
 
-		Data: builder.Data,
+		Data:       builder.Data,
+		StringData: builder.StringData,
 	}
 
 	return NewSecret(client, secret)
