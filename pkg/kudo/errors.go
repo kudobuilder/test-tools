@@ -14,6 +14,7 @@ type PlanStatusTimeout struct {
 	Message        string
 }
 
+// Error returns a pretty-printed error string.
 func (p PlanStatusTimeout) Error() string {
 	return fmt.Sprintf(
 		"timed out waiting for plan %s to have %s status; current plan status is %s with message \"%s\"",
@@ -23,5 +24,8 @@ func (p PlanStatusTimeout) Error() string {
 		p.Message)
 }
 
-func (PlanStatusTimeout) Timeout() bool   { return true }
+// Timeout indicates that this is an error describing a timeout.
+func (PlanStatusTimeout) Timeout() bool { return true }
+
+// Temporary indicates that this is a temporary error.
 func (PlanStatusTimeout) Temporary() bool { return true }

@@ -71,7 +71,7 @@ func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.Ex
 	return instance.Status.PlanStatus[plan].Status, instance.Status.PlanStatus[plan].Message
 }
 
-// WaitForStatus waits for an instance plan status to reach a status.
+// WaitForPlanStatus waits for an instance plan status to reach a status.
 // A ticker polls the current instance status until the desired status is reached for a specific plan.
 // A context can abort the polling.
 func (instance Instance) WaitForPlanStatus(
@@ -114,7 +114,7 @@ type WaitConfig struct {
 	Timeout time.Duration
 }
 
-// WaitForDeployInProgress waits for an instance plan status to be in progress.
+// WaitForPlanInProgress waits for an instance plan status to be in progress.
 // By default it waits for 30 seconds unless overridden with a WaitTimeout.
 func (instance Instance) WaitForPlanInProgress(plan string, options ...WaitOption) error {
 	config := WaitConfig{
@@ -134,7 +134,7 @@ func (instance Instance) WaitForPlanInProgress(plan string, options ...WaitOptio
 	return instance.WaitForPlanStatus(ctx, ticker, plan, kudov1beta1.ExecutionInProgress)
 }
 
-// WaitForDeployComplete waits up to 5 minutes for an instance plan status to be completed.
+// WaitForPlanComplete waits up to 5 minutes for an instance plan status to be completed.
 // By default it waits for 5 minutes unless overridden with a WaitTimeout.
 func (instance Instance) WaitForPlanComplete(plan string, options ...WaitOption) error {
 	config := WaitConfig{

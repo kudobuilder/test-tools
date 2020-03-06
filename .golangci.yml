@@ -20,3 +20,5 @@ linter-settings:
     check-type-assertions: true
   goimports:
     local-prefixes: github.com/kudobuilder/test-tools
+issues:
+  exclude-use-default: false

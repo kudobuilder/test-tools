@@ -122,14 +122,14 @@ func ({{ .Type | toLower }} *{{ .Type }}) Update() error {
 }
 `
 
-type Parameters struct {
+type parameters struct {
 	API  string
 	Type string
 }
 
 // stub-gen creates common function for Kubernetes object wrappers.
 func main() {
-	var parameters Parameters
+	var parameters parameters
 
 	flag.StringVar(&parameters.API, "api", "", "kubernetes API")
 	flag.StringVar(&parameters.Type, "type", "", "type to generate")
