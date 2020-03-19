@@ -11,6 +11,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
+
 // RoleBinding wraps a Kubernetes RoleBinding.
 type RoleBinding struct {
 	rbacv1.RoleBinding
@@ -30,7 +31,7 @@ func NewRoleBinding(client client.Client, rolebinding rbacv1.RoleBinding) (RoleB
 
 	return RoleBinding{
 		RoleBinding: *createdRoleBinding,
-		client:      client,
+		client: client,
 	}, nil
 }
 
@@ -48,7 +49,7 @@ func GetRoleBinding(client client.Client, name string, namespace string) (RoleBi
 
 	return RoleBinding{
 		RoleBinding: *rolebinding,
-		client:      client,
+		client: client,
 	}, nil
 }
 
@@ -69,7 +70,7 @@ func ListRoleBindings(client client.Client, namespace string) ([]RoleBinding, er
 	for _, item := range list.Items {
 		rolebindings = append(rolebindings, RoleBinding{
 			RoleBinding: item,
-			client:      client,
+			client: client,
 		})
 	}
 

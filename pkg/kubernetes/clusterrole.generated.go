@@ -11,6 +11,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
+
 // ClusterRole wraps a Kubernetes ClusterRole.
 type ClusterRole struct {
 	rbacv1.ClusterRole
@@ -30,7 +31,7 @@ func NewClusterRole(client client.Client, clusterrole rbacv1.ClusterRole) (Clust
 
 	return ClusterRole{
 		ClusterRole: *createdClusterRole,
-		client:      client,
+		client: client,
 	}, nil
 }
 
@@ -48,7 +49,7 @@ func GetClusterRole(client client.Client, name string) (ClusterRole, error) {
 
 	return ClusterRole{
 		ClusterRole: *clusterrole,
-		client:      client,
+		client: client,
 	}, nil
 }
 
@@ -69,7 +70,7 @@ func ListClusterRoles(client client.Client) ([]ClusterRole, error) {
 	for _, item := range list.Items {
 		clusterroles = append(clusterroles, ClusterRole{
 			ClusterRole: item,
-			client:      client,
+			client: client,
 		})
 	}
 

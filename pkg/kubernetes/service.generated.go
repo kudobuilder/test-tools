@@ -30,7 +30,7 @@ func NewService(client client.Client, service corev1.Service) (Service, error) {
 	}
 
 	return Service{
-		Service:    *createdService,
+		Service: *createdService,
 		client: client,
 	}, nil
 }
@@ -48,7 +48,7 @@ func GetService(client client.Client, name string, namespace string) (Service, e
 	}
 
 	return Service{
-		Service:    *service,
+		Service: *service,
 		client: client,
 	}, nil
 }
@@ -69,7 +69,7 @@ func ListServices(client client.Client, namespace string) ([]Service, error) {
 
 	for _, item := range list.Items {
 		services = append(services, Service{
-			Service:    item,
+			Service: item,
 			client: client,
 		})
 	}

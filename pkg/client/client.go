@@ -8,6 +8,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// Client wraps Kubernetes and KUDO APIs.
 type Client struct {
 	Kubernetes kubernetes.Interface
 	Kudo       kudo.Interface

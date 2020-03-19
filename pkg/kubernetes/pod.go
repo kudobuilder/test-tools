@@ -12,7 +12,7 @@ import (
 
 //go:generate stub-gen -api CoreV1 -type Pod
 
-// Logs returns the (current) logs of a pod's container.
+// ContainerLogs returns the (current) logs of a pod's container.
 func (pod Pod) ContainerLogs(container string) ([]byte, error) {
 	options := corev1.PodLogOptions{
 		Container: container,
@@ -31,7 +31,7 @@ func (pod Pod) ContainerLogs(container string) ([]byte, error) {
 	return result.Raw()
 }
 
-// Exec runs a command in a pod's container.
+// ContainerExec runs a command in a pod's container.
 func (pod Pod) ContainerExec(container string, command cmd.Builder) error {
 	options := corev1.PodExecOptions{
 		Container: container,
