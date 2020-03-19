@@ -64,7 +64,7 @@ func ListInstances(client client.Client, namespace string) ([]Instance, error) {
 	return instances, nil
 }
 
-func currentPlanStatusUID(instance Instance, plan string) apimachinerytypes.UID {
+func currentPlanStatusUID(instance *Instance, plan string) apimachinerytypes.UID {
 	if _, ok := instance.Status.PlanStatus[plan]; !ok {
 		// The plan may not have been in use before.
 		// We continue, assuming that the plan name is valid and present in OperatorVersion.
@@ -76,7 +76,7 @@ func currentPlanStatusUID(instance Instance, plan string) apimachinerytypes.UID 
 	return ps.UID
 }
 
-func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.ExecutionStatus, string) {
+func currentPlanStatusAndMessage(instance *Instance, plan string) (kudov1beta1.ExecutionStatus, string) {
 	if _, ok := instance.Status.PlanStatus[plan]; !ok {
 		// The plan may not have been in use before.
 		// We continue, assuming that the plan name is valid and present in OperatorVersion.
@@ -110,7 +110,7 @@ func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.Ex
 // WaitForPlanStatus waits for an instance plan status to reach a status.
 // A ticker polls the current instance status until the desired status is reached for a specific plan.
 // A context can abort the polling.
-func (instance Instance) WaitForPlanStatus(
+func (instance *Instance) WaitForPlanStatus(
 	ctx context.Context,
 	ticker *time.Ticker,
 	plan string,
@@ -158,7 +158,7 @@ type WaitConfig struct {
 
 // WaitForPlanInProgress waits for an instance plan status to be in progress.
 // By default it waits for 30 seconds unless overridden with a WaitTimeout.
-func (instance Instance) WaitForPlanInProgress(plan string, options ...WaitOption) error {
+func (instance *Instance) WaitForPlanInProgress(plan string, options ...WaitOption) error {
 	config := WaitConfig{
 		Timeout: time.Second * 30,
 	}
@@ -178,7 +178,7 @@ func (instance Instance) WaitForPlanInProgress(plan string, options ...WaitOptio
 
 // WaitForPlanComplete waits up to 5 minutes for an instance plan status to be completed.
 // By default it waits for 5 minutes unless overridden with a WaitTimeout.
-func (instance Instance) WaitForPlanComplete(plan string, options ...WaitOption) error {
+func (instance *Instance) WaitForPlanComplete(plan string, options ...WaitOption) error {
 	config := WaitConfig{
 		Timeout: time.Minute * 5,
 	}
