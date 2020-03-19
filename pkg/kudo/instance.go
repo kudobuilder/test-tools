@@ -64,7 +64,7 @@ func ListInstances(client client.Client, namespace string) ([]Instance, error) {
 	return instances, nil
 }
 
-func currentPlanUID(instance Instance, plan string) apimachinerytypes.UID {
+func currentPlanStatusUID(instance Instance, plan string) apimachinerytypes.UID {
 	if _, ok := instance.Status.PlanStatus[plan]; !ok {
 		// The plan may not have been in use before.
 		// We continue, assuming that the plan name is valid and present in OperatorVersion.
@@ -83,6 +83,8 @@ func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.Ex
 		return kudov1beta1.ExecutionNeverRun, ""
 	}
 
+	// The detailed status message is only availble in the deepest level of the status, so
+	// we need to iterate until we fine it.
 	ps := instance.Status.PlanStatus[plan]
 	if ps.Status != kudov1beta1.ExecutionFatalError || ps.Message != "" {
 		return ps.Status, ps.Message
@@ -134,7 +136,7 @@ func (instance Instance) WaitForPlanStatus(
 				return err
 			}
 
-			activePlanUID := currentPlanUID(instance, plan)
+			activePlanUID := currentPlanStatusUID(instance, plan)
 			if activePlanUID == instance.lastPlanCheckUID {
 				continue
 			}
