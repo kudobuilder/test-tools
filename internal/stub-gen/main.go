@@ -17,7 +17,8 @@ import (
 	"fmt"
 {{ if eq .API "CoreV1" }}
 	corev1 "k8s.io/api/core/v1"{{ else  if eq .API "AppsV1" }}
-	appsv1 "k8s.io/api/apps/v1"{{ end }}
+	appsv1 "k8s.io/api/apps/v1"{{ else  if eq .API "RbacV1" }}
+	rbacv1 "k8s.io/api/rbac/v1"{{ end }}
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kudobuilder/test-tools/pkg/client"
@@ -35,10 +36,10 @@ type {{ .Type }} struct {
 func New{{ .Type }}(client client.Client, {{ .Type | toLower }} {{ .API | toLower }}.{{ .Type }}) ({{ .Type }}, error) {
 	created{{ .Type }}, err := client.Kubernetes.
 		{{ .API }}().
-		{{ .Type }}s({{ .Type | toLower }}.Namespace).
+		{{ .Type }}s({{ if .HasNamespace }}{{ .Type | toLower }}.Namespace{{end}}).
 		Create(&{{ .Type | toLower }})
 	if err != nil {
-		return {{ .Type }}{}, fmt.Errorf("failed to create {{ .Type | toLower }} %s in namespace %s: %w", {{ .Type | toLower }}.Name, {{ .Type | toLower}}.Namespace, err)
+		return {{ .Type }}{}, fmt.Errorf("failed to create {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ .Type | toLower }}.Name{{ if .HasNamespace }}, {{ .Type | toLower}}.Namespace{{ end }}, err)
 	}
 
 	return {{ .Type }}{
@@ -47,16 +48,16 @@ func New{{ .Type }}(client client.Client, {{ .Type | toLower }} {{ .API | toLowe
 	}, nil
 }
 
-// Get{{ .Type }} gets a {{ .Type | toLower }} in a namespace.
-func Get{{ .Type }}(client client.Client, name string, namespace string) ({{ .Type }}, error) {
+// Get{{ .Type }} gets a {{ .Type | toLower }}{{ if .HasNamespace }} in a namespace{{ end }}.
+func Get{{ .Type }}(client client.Client, name string{{ if .HasNamespace }}, namespace string{{ end }}) ({{ .Type }}, error) {
 	options := metav1.GetOptions{}
 
 	{{ .Type | toLower }}, err := client.Kubernetes.
 		{{ .API }}().
-		{{ .Type }}s(namespace).
+		{{ .Type }}s({{ if .HasNamespace }}namespace{{ end }}).
 		Get(name, options)
 	if err != nil {
-		return {{ .Type }}{}, fmt.Errorf("failed to get {{ .Type | toLower }} %s in namespace %s: %w", name, namespace, err)
+		return {{ .Type }}{}, fmt.Errorf("failed to get {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", name{{ if .HasNamespace }}, namespace{{ end }}, err)
 	}
 
 	return {{ .Type }}{
@@ -65,16 +66,16 @@ func Get{{ .Type }}(client client.Client, name string, namespace string) ({{ .Ty
 	}, nil
 }
 
-// List{{ .Type }}s lists all {{ .Type | toLower}}s in a namespace.
-func List{{.Type}}s(client client.Client, namespace string) ([]{{ .Type }}, error) {
+// List{{ .Type }}s lists all {{ .Type | toLower}}s{{ if .HasNamespace }} in a namespace{{ end }}.
+func List{{.Type}}s(client client.Client{{ if .HasNamespace }}, namespace string{{ end }}) ([]{{ .Type }}, error) {
 	options := metav1.ListOptions{}
 
 	list, err := client.Kubernetes.
 		{{ .API }}().
-		{{ .Type }}s(namespace).
+		{{ .Type }}s({{ if .HasNamespace }}namespace{{ end }}).
 		List(options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list {{ .Type | toLower }}s in namespace %s: %w", namespace, err)
+		return nil, fmt.Errorf("failed to list {{ .Type | toLower }}s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ if .HasNamespace }}namespace, {{ end }}err)
 	}
 
 	{{ .Type | toLower }}s := make([]{{ .Type }}, 0, len(list.Items))
@@ -95,10 +96,10 @@ func ({{ .Type | toLower }} {{ .Type }}) Delete() error {
 
 	err := {{ .Type | toLower }}.client.Kubernetes.
 		{{ .API }}().
-		{{ .Type }}s({{ .Type | toLower }}.Namespace).
+		{{ .Type }}s({{ if .HasNamespace }}{{ .Type | toLower }}.Namespace{{ end }}).
 		Delete({{ .Type | toLower }}.Name, &options)
 	if err != nil {
-		return fmt.Errorf("failed to delete {{ .Type | toLower }} %s in namespace %s: %w", {{ .Type | toLower }}.Name, {{ .Type | toLower}}.Namespace, err)
+		return fmt.Errorf("failed to delete {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ .Type | toLower }}.Name, {{ if .HasNamespace }}{{ .Type | toLower}}.Namespace, {{ end }}err)
 	}
 
 	return nil
@@ -110,10 +111,10 @@ func ({{ .Type | toLower }} *{{ .Type }}) Update() error {
 
 	update, err := {{ .Type | toLower }}.client.Kubernetes.
 		{{ .API }}().
-		{{ .Type }}s({{ .Type | toLower }}.Namespace).
+		{{ .Type }}s({{ if .HasNamespace }}{{ .Type | toLower }}.Namespace{{ end }}).
 		Get({{ .Type | toLower }}.Name, options)
 	if err != nil {
-		return fmt.Errorf("failed to update {{ .Type | toLower }} %s in namespace %s: %w", {{ .Type | toLower }}.Name, {{ .Type | toLower}}.Namespace, err)
+		return fmt.Errorf("failed to update {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ .Type | toLower }}.Name, {{ if .HasNamespace }}{{ .Type | toLower}}.Namespace, {{ end }}err)
 	}
 
 	{{ .Type | toLower }}.{{ .Type }} = *update
@@ -123,8 +124,9 @@ func ({{ .Type | toLower }} *{{ .Type }}) Update() error {
 `
 
 type Parameters struct {
-	API  string
-	Type string
+	API          string
+	Type         string
+	HasNamespace bool
 }
 
 // stub-gen creates common function for Kubernetes object wrappers.
@@ -133,6 +135,8 @@ func main() {
 
 	flag.StringVar(&parameters.API, "api", "", "kubernetes API")
 	flag.StringVar(&parameters.Type, "type", "", "type to generate")
+
+	flag.BoolVar(&parameters.HasNamespace, "hasNamespace", true, "type uses namespace")
 
 	flag.Parse()
 
