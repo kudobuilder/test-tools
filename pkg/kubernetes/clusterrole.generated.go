@@ -30,7 +30,7 @@ func NewClusterRole(client client.Client, clusterrole rbacv1.ClusterRole) (Clust
 	}
 
 	return ClusterRole{
-		ClusterRole:    *createdClusterRole,
+		ClusterRole: *createdClusterRole,
 		client: client,
 	}, nil
 }
@@ -48,7 +48,7 @@ func GetClusterRole(client client.Client, name string) (ClusterRole, error) {
 	}
 
 	return ClusterRole{
-		ClusterRole:    *clusterrole,
+		ClusterRole: *clusterrole,
 		client: client,
 	}, nil
 }
@@ -69,7 +69,7 @@ func ListClusterRoles(client client.Client) ([]ClusterRole, error) {
 
 	for _, item := range list.Items {
 		clusterroles = append(clusterroles, ClusterRole{
-			ClusterRole:    item,
+			ClusterRole: item,
 			client: client,
 		})
 	}

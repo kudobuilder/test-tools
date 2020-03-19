@@ -43,7 +43,7 @@ func New{{ .Type }}(client client.Client, {{ .Type | toLower }} {{ .API | toLowe
 	}
 
 	return {{ .Type }}{
-		{{ .Type }}:    *created{{ .Type }},
+		{{ .Type }}: *created{{ .Type }},
 		client: client,
 	}, nil
 }
@@ -61,7 +61,7 @@ func Get{{ .Type }}(client client.Client, name string{{ if .HasNamespace }}, nam
 	}
 
 	return {{ .Type }}{
-		{{ .Type }}:    *{{ .Type | toLower }},
+		{{ .Type }}: *{{ .Type | toLower }},
 		client: client,
 	}, nil
 }
@@ -82,7 +82,7 @@ func List{{.Type}}s(client client.Client{{ if .HasNamespace }}, namespace string
 
 	for _, item := range list.Items {
 		{{ .Type | toLower }}s = append({{ .Type | toLower }}s, {{ .Type }}{
-			{{ .Type }}:    item,
+			{{ .Type }}: item,
 			client: client,
 		})
 	}

@@ -30,7 +30,7 @@ func NewSecret(client client.Client, secret corev1.Secret) (Secret, error) {
 	}
 
 	return Secret{
-		Secret:    *createdSecret,
+		Secret: *createdSecret,
 		client: client,
 	}, nil
 }
@@ -48,7 +48,7 @@ func GetSecret(client client.Client, name string, namespace string) (Secret, err
 	}
 
 	return Secret{
-		Secret:    *secret,
+		Secret: *secret,
 		client: client,
 	}, nil
 }
@@ -69,7 +69,7 @@ func ListSecrets(client client.Client, namespace string) ([]Secret, error) {
 
 	for _, item := range list.Items {
 		secrets = append(secrets, Secret{
-			Secret:    item,
+			Secret: item,
 			client: client,
 		})
 	}

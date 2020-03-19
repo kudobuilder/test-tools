@@ -30,7 +30,7 @@ func NewPersistentVolumeClaim(client client.Client, persistentvolumeclaim corev1
 	}
 
 	return PersistentVolumeClaim{
-		PersistentVolumeClaim:    *createdPersistentVolumeClaim,
+		PersistentVolumeClaim: *createdPersistentVolumeClaim,
 		client: client,
 	}, nil
 }
@@ -48,7 +48,7 @@ func GetPersistentVolumeClaim(client client.Client, name string, namespace strin
 	}
 
 	return PersistentVolumeClaim{
-		PersistentVolumeClaim:    *persistentvolumeclaim,
+		PersistentVolumeClaim: *persistentvolumeclaim,
 		client: client,
 	}, nil
 }
@@ -69,7 +69,7 @@ func ListPersistentVolumeClaims(client client.Client, namespace string) ([]Persi
 
 	for _, item := range list.Items {
 		persistentvolumeclaims = append(persistentvolumeclaims, PersistentVolumeClaim{
-			PersistentVolumeClaim:    item,
+			PersistentVolumeClaim: item,
 			client: client,
 		})
 	}

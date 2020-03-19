@@ -30,7 +30,7 @@ func NewRoleBinding(client client.Client, rolebinding rbacv1.RoleBinding) (RoleB
 	}
 
 	return RoleBinding{
-		RoleBinding:    *createdRoleBinding,
+		RoleBinding: *createdRoleBinding,
 		client: client,
 	}, nil
 }
@@ -48,7 +48,7 @@ func GetRoleBinding(client client.Client, name string, namespace string) (RoleBi
 	}
 
 	return RoleBinding{
-		RoleBinding:    *rolebinding,
+		RoleBinding: *rolebinding,
 		client: client,
 	}, nil
 }
@@ -69,7 +69,7 @@ func ListRoleBindings(client client.Client, namespace string) ([]RoleBinding, er
 
 	for _, item := range list.Items {
 		rolebindings = append(rolebindings, RoleBinding{
-			RoleBinding:    item,
+			RoleBinding: item,
 			client: client,
 		})
 	}
