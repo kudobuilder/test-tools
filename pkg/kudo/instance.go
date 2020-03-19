@@ -70,7 +70,9 @@ func currentPlanUID(instance Instance, plan string) apimachinerytypes.UID {
 		// We continue, assuming that the plan name is valid and present in OperatorVersion.
 		return ""
 	}
+
 	ps := instance.Status.PlanStatus[plan]
+
 	return ps.UID
 }
 
@@ -80,8 +82,8 @@ func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.Ex
 		// We continue, assuming that the plan name is valid and present in OperatorVersion.
 		return kudov1beta1.ExecutionNeverRun, ""
 	}
-	ps := instance.Status.PlanStatus[plan]
 
+	ps := instance.Status.PlanStatus[plan]
 	if ps.Status != kudov1beta1.ExecutionFatalError || ps.Message != "" {
 		return ps.Status, ps.Message
 	}
@@ -91,6 +93,7 @@ func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.Ex
 			if phaseStatus.Message != "" {
 				return ps.Status, phaseStatus.Message
 			}
+
 			for _, stepStatus := range phaseStatus.Steps {
 				if stepStatus.Status == kudov1beta1.ExecutionFatalError {
 					return ps.Status, stepStatus.Message
