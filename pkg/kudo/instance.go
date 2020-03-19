@@ -8,6 +8,7 @@ import (
 
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
@@ -15,6 +16,8 @@ import (
 // Instance wraps a KUDO instance.
 type Instance struct {
 	kudov1beta1.Instance
+
+	lastPlanCheckUID apimachinerytypes.UID
 
 	client client.Client
 }
@@ -61,11 +64,39 @@ func ListInstances(client client.Client, namespace string) ([]Instance, error) {
 	return instances, nil
 }
 
+func currentPlanUID(instance Instance, plan string) apimachinerytypes.UID {
+	if _, ok := instance.Status.PlanStatus[plan]; !ok {
+		// The plan may not have been in use before.
+		// We continue, assuming that the plan name is valid and present in OperatorVersion.
+		return ""
+	}
+	ps := instance.Status.PlanStatus[plan]
+	return ps.UID
+}
+
 func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.ExecutionStatus, string) {
 	if _, ok := instance.Status.PlanStatus[plan]; !ok {
 		// The plan may not have been in use before.
 		// We continue, assuming that the plan name is valid and present in OperatorVersion.
 		return kudov1beta1.ExecutionNeverRun, ""
+	}
+	ps := instance.Status.PlanStatus[plan]
+
+	if ps.Status != kudov1beta1.ExecutionFatalError || ps.Message != "" {
+		return ps.Status, ps.Message
+	}
+
+	for _, phaseStatus := range ps.Phases {
+		if phaseStatus.Status == kudov1beta1.ExecutionFatalError {
+			if phaseStatus.Message != "" {
+				return ps.Status, phaseStatus.Message
+			}
+			for _, stepStatus := range phaseStatus.Steps {
+				if stepStatus.Status == kudov1beta1.ExecutionFatalError {
+					return ps.Status, stepStatus.Message
+				}
+			}
+		}
 	}
 
 	return instance.Status.PlanStatus[plan].Status, instance.Status.PlanStatus[plan].Message
@@ -100,9 +131,15 @@ func (instance Instance) WaitForPlanStatus(
 				return err
 			}
 
+			activePlanUID := currentPlanUID(instance, plan)
+			if activePlanUID == instance.lastPlanCheckUID {
+				continue
+			}
+
 			currentStatus, _ := currentPlanStatusAndMessage(instance, plan)
 
 			if currentStatus == status {
+				instance.lastPlanCheckUID = activePlanUID
 				return nil
 			}
 		}
