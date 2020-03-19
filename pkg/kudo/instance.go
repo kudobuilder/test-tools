@@ -110,7 +110,7 @@ func currentPlanStatusAndMessage(instance Instance, plan string) (kudov1beta1.Ex
 // WaitForPlanStatus waits for an instance plan status to reach a status.
 // A ticker polls the current instance status until the desired status is reached for a specific plan.
 // A context can abort the polling.
-func (instance Instance) WaitForPlanStatus(
+func (instance *Instance) WaitForPlanStatus(
 	ctx context.Context,
 	ticker *time.Ticker,
 	plan string,
@@ -120,7 +120,7 @@ func (instance Instance) WaitForPlanStatus(
 		case <-ctx.Done():
 			err := ctx.Err()
 			if errors.Is(err, context.DeadlineExceeded) {
-				currentStatus, message := currentPlanStatusAndMessage(instance, plan)
+				currentStatus, message := currentPlanStatusAndMessage(*instance, plan)
 
 				return PlanStatusTimeout{
 					Plan:           plan,
@@ -136,12 +136,12 @@ func (instance Instance) WaitForPlanStatus(
 				return err
 			}
 
-			activePlanUID := currentPlanStatusUID(instance, plan)
+			activePlanUID := currentPlanStatusUID(*instance, plan)
 			if activePlanUID == instance.lastPlanCheckUID {
 				continue
 			}
 
-			currentStatus, _ := currentPlanStatusAndMessage(instance, plan)
+			currentStatus, _ := currentPlanStatusAndMessage(*instance, plan)
 
 			if currentStatus == status {
 				instance.lastPlanCheckUID = activePlanUID
@@ -158,7 +158,7 @@ type WaitConfig struct {
 
 // WaitForPlanInProgress waits for an instance plan status to be in progress.
 // By default it waits for 30 seconds unless overridden with a WaitTimeout.
-func (instance Instance) WaitForPlanInProgress(plan string, options ...WaitOption) error {
+func (instance *Instance) WaitForPlanInProgress(plan string, options ...WaitOption) error {
 	config := WaitConfig{
 		Timeout: time.Second * 30,
 	}
@@ -178,7 +178,7 @@ func (instance Instance) WaitForPlanInProgress(plan string, options ...WaitOptio
 
 // WaitForPlanComplete waits up to 5 minutes for an instance plan status to be completed.
 // By default it waits for 5 minutes unless overridden with a WaitTimeout.
-func (instance Instance) WaitForPlanComplete(plan string, options ...WaitOption) error {
+func (instance *Instance) WaitForPlanComplete(plan string, options ...WaitOption) error {
 	config := WaitConfig{
 		Timeout: time.Minute * 5,
 	}
