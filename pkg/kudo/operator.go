@@ -155,7 +155,8 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 		false,
 		builder.Instance,
 		builder.Namespace,
-		builder.Parameters)
+		builder.Parameters,
+		false)
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to install operator %s: %w", builder.Name, err)
 	}
