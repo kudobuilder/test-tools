@@ -2,6 +2,11 @@ package kudo
 
 import (
 	"fmt"
+	"log"
+
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	watch "k8s.io/apimachinery/pkg/watch"
 
 	"github.com/Masterminds/semver"
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
@@ -169,11 +174,32 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 // We assume that this is the intended behavior for most test cases.
 // Don't use this for test cases which have multiple Instances for a single OperatorVersion.
 func (operator Operator) Uninstall() error {
+	return operator.uninstallWithWaitPolicy(noWait)
+}
+
+// UninstallWaitForInstance is the same as Uninstall but waits for the instance to disappear.
+func (operator Operator) UninstallWaitForInstance() error {
+	return operator.uninstallWithWaitPolicy(waitForInstanceToDisappear)
+}
+
+type waitPolicy int
+
+const (
+	noWait waitPolicy = iota
+	waitForInstanceToDisappear
+)
+
+func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
 	if operator.client.Kudo == nil {
 		return fmt.Errorf("operator is not initialized")
 	}
 
 	options := metav1.DeleteOptions{}
+
+	if policy == waitForInstanceToDisappear {
+		propagationPolicy := metav1.DeletePropagationForeground
+		options.PropagationPolicy = &propagationPolicy
+	}
 
 	err := operator.client.Kudo.
 		KudoV1beta1().
@@ -185,6 +211,37 @@ func (operator Operator) Uninstall() error {
 			operator.Instance.Name,
 			operator.Instance.Namespace,
 			err)
+	}
+
+	if policy == waitForInstanceToDisappear {
+		listOptions := metav1.ListOptions{
+			ResourceVersion: operator.Instance.ObjectMeta.ResourceVersion,
+			LabelSelector:   labels.SelectorFromSet(operator.Instance.Labels).String(),
+		}
+
+		log.Printf("watching instance disappearance with %v", listOptions)
+
+		w, err := operator.client.Kudo.
+			KudoV1beta1().
+			Instances(operator.Instance.Namespace).Watch(listOptions)
+		if err != nil {
+			return fmt.Errorf("TODO: %v", err)
+		}
+
+		defer w.Stop()
+
+		for event := range w.ResultChan() {
+			log.Printf("got event %v", event)
+
+			o, err := runtime.DefaultUnstructuredConverter.ToUnstructured(event.Object)
+			if err != nil {
+				return fmt.Errorf("TODO2: %v", err)
+			}
+
+			if event.Type == watch.Deleted && o["metadata"].(map[string]interface{})["name"].(string) == operator.Instance.Name {
+				break
+			}
+		}
 	}
 
 	err = operator.client.Kudo.
