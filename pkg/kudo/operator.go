@@ -6,7 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/Masterminds/semver"
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
@@ -177,16 +177,16 @@ func (operator Operator) Uninstall() error {
 	return operator.uninstallWithWaitPolicy(noWait)
 }
 
-// UninstallWaitForInstance is the same as Uninstall but waits for the instance to disappear.
-func (operator Operator) UninstallWaitForInstance() error {
-	return operator.uninstallWithWaitPolicy(waitForInstanceToDisappear)
+// UninstallWaitForDeletion is the same as Uninstall but waits for the KUDO resources to disappear.
+func (operator Operator) UninstallWaitForDeletion() error {
+	return operator.uninstallWithWaitPolicy(waitForDisappearance)
 }
 
 type waitPolicy int
 
 const (
 	noWait waitPolicy = iota
-	waitForInstanceToDisappear
+	waitForDisappearance
 )
 
 func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
@@ -196,7 +196,7 @@ func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
 
 	options := metav1.DeleteOptions{}
 
-	if policy == waitForInstanceToDisappear {
+	if policy == waitForDisappearance {
 		propagationPolicy := metav1.DeletePropagationForeground
 		options.PropagationPolicy = &propagationPolicy
 	}
@@ -207,41 +207,10 @@ func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
 		Delete(operator.Instance.Name, &options)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to delete Instance %s in namespace %s: %w",
+			"failed to delete Instance %s in namespace %s: %v",
 			operator.Instance.Name,
 			operator.Instance.Namespace,
 			err)
-	}
-
-	if policy == waitForInstanceToDisappear {
-		listOptions := metav1.ListOptions{
-			ResourceVersion: operator.Instance.ObjectMeta.ResourceVersion,
-			LabelSelector:   labels.SelectorFromSet(operator.Instance.Labels).String(),
-		}
-
-		log.Printf("watching instance disappearance with %v", listOptions)
-
-		w, err := operator.client.Kudo.
-			KudoV1beta1().
-			Instances(operator.Instance.Namespace).Watch(listOptions)
-		if err != nil {
-			return fmt.Errorf("TODO: %v", err)
-		}
-
-		defer w.Stop()
-
-		for event := range w.ResultChan() {
-			log.Printf("got event %v", event)
-
-			o, err := runtime.DefaultUnstructuredConverter.ToUnstructured(event.Object)
-			if err != nil {
-				return fmt.Errorf("TODO2: %v", err)
-			}
-
-			if event.Type == watch.Deleted && o["metadata"].(map[string]interface{})["name"].(string) == operator.Instance.Name {
-				break
-			}
-		}
 	}
 
 	err = operator.client.Kudo.
@@ -266,6 +235,88 @@ func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
 			operator.Operator.Name,
 			operator.Operator.Namespace,
 			err)
+	}
+
+	if policy == waitForDisappearance {
+		if err := waitForInstanceDeletion(operator); err != nil {
+			return err
+		}
+
+		if err := waitForOperatorVersionDeletion(operator); err != nil {
+			return err
+		}
+
+		if err := waitForOperatorDeletion(operator); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func waitForInstanceDeletion(operator Operator) error {
+	objectMeta := operator.Instance.ObjectMeta
+	listOptions := getWatchListOptions(objectMeta)
+
+	log.Printf("watching instance disappearance with %#v", listOptions)
+
+	w, err := operator.client.Kudo.KudoV1beta1().Instances(objectMeta.Namespace).Watch(listOptions)
+	if err != nil {
+		return fmt.Errorf("TODO: %v", err)
+	}
+
+	return watchForDeletion(objectMeta, w)
+}
+
+func waitForOperatorVersionDeletion(operator Operator) error {
+	objectMeta := operator.OperatorVersion.ObjectMeta
+	listOptions := getWatchListOptions(objectMeta)
+
+	log.Printf("watching operator version disappearance with %#v", listOptions)
+
+	w, err := operator.client.Kudo.KudoV1beta1().OperatorVersions(objectMeta.Namespace).Watch(listOptions)
+	if err != nil {
+		return fmt.Errorf("TODO: %v", err)
+	}
+
+	return watchForDeletion(objectMeta, w)
+}
+
+func waitForOperatorDeletion(operator Operator) error {
+	objectMeta := operator.Operator.ObjectMeta
+	listOptions := getWatchListOptions(objectMeta)
+
+	log.Printf("watching operator version disappearance with %#v", listOptions)
+
+	w, err := operator.client.Kudo.KudoV1beta1().Operators(objectMeta.Namespace).Watch(listOptions)
+	if err != nil {
+		return fmt.Errorf("TODO: %v", err)
+	}
+
+	return watchForDeletion(objectMeta, w)
+}
+
+func getWatchListOptions(objectMeta metav1.ObjectMeta) metav1.ListOptions {
+	return metav1.ListOptions{
+		ResourceVersion: objectMeta.ResourceVersion,
+		LabelSelector:   labels.SelectorFromSet(objectMeta.Labels).String(),
+	}
+}
+
+func watchForDeletion(objectMeta metav1.ObjectMeta, w watch.Interface) error {
+	defer w.Stop()
+
+	for event := range w.ResultChan() {
+		log.Printf("got event %#v", event)
+
+		o, err := runtime.DefaultUnstructuredConverter.ToUnstructured(event.Object)
+		if err != nil {
+			return fmt.Errorf("TODO2: %v", err)
+		}
+
+		if event.Type == watch.Deleted && o["metadata"].(map[string]interface{})["name"].(string) == objectMeta.Name {
+			break
+		}
 	}
 
 	return nil
