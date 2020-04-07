@@ -2,7 +2,7 @@ package kudo
 
 import (
 	"fmt"
-	"log"
+	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -174,29 +174,20 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 // We assume that this is the intended behavior for most test cases.
 // Don't use this for test cases which have multiple Instances for a single OperatorVersion.
 func (operator Operator) Uninstall() error {
-	return operator.uninstallWithWaitPolicy(noWait)
+	return operator.UninstallWaitForDeletion(0)
 }
 
-// UninstallWaitForDeletion is the same as Uninstall but waits for the KUDO resources to disappear.
-func (operator Operator) UninstallWaitForDeletion() error {
-	return operator.uninstallWithWaitPolicy(waitForDisappearance)
-}
-
-type waitPolicy int
-
-const (
-	noWait waitPolicy = iota
-	waitForDisappearance
-)
-
-func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
+// UninstallWaitForDeletion is the same as Uninstall but
+// initiates a foreground deletion, and waits for the KUDO resources to disappear.
+// Waits up to timeout for the instance to be deleted, and up to 10 seconds for each of OperatorVersion and Operator.
+func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	if operator.client.Kudo == nil {
 		return fmt.Errorf("operator is not initialized")
 	}
 
 	options := metav1.DeleteOptions{}
 
-	if policy == waitForDisappearance {
+	if timeout != 0 {
 		propagationPolicy := metav1.DeletePropagationForeground
 		options.PropagationPolicy = &propagationPolicy
 	}
@@ -219,7 +210,7 @@ func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
 		Delete(operator.OperatorVersion.Name, &options)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to delete OperatorVersion %s in namespace %s: %w",
+			"failed to delete OperatorVersion %s in namespace %s: %v",
 			operator.OperatorVersion.Name,
 			operator.OperatorVersion.Namespace,
 			err)
@@ -231,22 +222,31 @@ func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
 		Delete(operator.Operator.Name, &options)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to delete Operator %s in namespace %s: %w",
+			"failed to delete Operator %s in namespace %s: %v",
 			operator.Operator.Name,
 			operator.Operator.Namespace,
 			err)
 	}
 
-	if policy == waitForDisappearance {
-		if err := waitForInstanceDeletion(operator); err != nil {
+	if timeout != 0 {
+		kudoV1beta1 := operator.client.Kudo.KudoV1beta1()
+		i := operator.Instance
+		ov := operator.OperatorVersion
+		o := operator.Operator
+		timeoutSeconds := timeout.Round(time.Second).Milliseconds() / 1000
+
+		err := waitForDeletion(kudoV1beta1.Instances(i.Namespace), i.ObjectMeta, timeoutSeconds)
+		if err != nil {
 			return err
 		}
 
-		if err := waitForOperatorVersionDeletion(operator); err != nil {
+		err = waitForDeletion(kudoV1beta1.OperatorVersions(ov.Namespace), ov.ObjectMeta, 10)
+		if err != nil {
 			return err
 		}
 
-		if err := waitForOperatorDeletion(operator); err != nil {
+		err = waitForDeletion(kudoV1beta1.Operators(o.Namespace), o.ObjectMeta, 10)
+		if err != nil {
 			return err
 		}
 	}
@@ -254,72 +254,40 @@ func (operator Operator) uninstallWithWaitPolicy(policy waitPolicy) error {
 	return nil
 }
 
-func waitForInstanceDeletion(operator Operator) error {
-	objectMeta := operator.Instance.ObjectMeta
-	listOptions := getWatchListOptions(objectMeta)
-
-	log.Printf("watching instance disappearance with %#v", listOptions)
-
-	w, err := operator.client.Kudo.KudoV1beta1().Instances(objectMeta.Namespace).Watch(listOptions)
-	if err != nil {
-		return fmt.Errorf("TODO: %v", err)
-	}
-
-	return watchForDeletion(objectMeta, w)
+type watcher interface {
+	Watch(ops metav1.ListOptions) (watch.Interface, error)
 }
 
-func waitForOperatorVersionDeletion(operator Operator) error {
-	objectMeta := operator.OperatorVersion.ObjectMeta
-	listOptions := getWatchListOptions(objectMeta)
-
-	log.Printf("watching operator version disappearance with %#v", listOptions)
-
-	w, err := operator.client.Kudo.KudoV1beta1().OperatorVersions(objectMeta.Namespace).Watch(listOptions)
-	if err != nil {
-		return fmt.Errorf("TODO: %v", err)
-	}
-
-	return watchForDeletion(objectMeta, w)
-}
-
-func waitForOperatorDeletion(operator Operator) error {
-	objectMeta := operator.Operator.ObjectMeta
-	listOptions := getWatchListOptions(objectMeta)
-
-	log.Printf("watching operator version disappearance with %#v", listOptions)
-
-	w, err := operator.client.Kudo.KudoV1beta1().Operators(objectMeta.Namespace).Watch(listOptions)
-	if err != nil {
-		return fmt.Errorf("TODO: %v", err)
-	}
-
-	return watchForDeletion(objectMeta, w)
-}
-
-func getWatchListOptions(objectMeta metav1.ObjectMeta) metav1.ListOptions {
-	return metav1.ListOptions{
+func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, timeoutSeconds int64) error {
+	listOptions := metav1.ListOptions{
 		ResourceVersion: objectMeta.ResourceVersion,
 		LabelSelector:   labels.SelectorFromSet(objectMeta.Labels).String(),
+		TimeoutSeconds:  &timeoutSeconds,
 	}
-}
 
-func watchForDeletion(objectMeta metav1.ObjectMeta, w watch.Interface) error {
+	w, err := watcherInterface.Watch(listOptions)
+	if err != nil {
+		return fmt.Errorf("starting watch with %#v failed: %v", listOptions, err)
+	}
+
 	defer w.Stop()
 
 	for event := range w.ResultChan() {
-		log.Printf("got event %#v", event)
-
 		o, err := runtime.DefaultUnstructuredConverter.ToUnstructured(event.Object)
 		if err != nil {
-			return fmt.Errorf("TODO2: %v", err)
+			return fmt.Errorf("converting object event %#v to unstructured failed: %v", event.Object, err)
 		}
 
-		if event.Type == watch.Deleted && o["metadata"].(map[string]interface{})["name"].(string) == objectMeta.Name {
-			break
+		if event.Type != watch.Deleted {
+			continue
+		}
+
+		if o["metadata"].(map[string]interface{})["name"].(string) == objectMeta.Name {
+			return nil
 		}
 	}
 
-	return nil
+	return fmt.Errorf("timed out waiting for deletion after %d seconds", timeoutSeconds)
 }
 
 // UpgradeBuilder tracks the options set for an upgrade.
