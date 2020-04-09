@@ -229,23 +229,29 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	}
 
 	if timeout != 0 {
-		kudoV1beta1 := operator.client.Kudo.KudoV1beta1()
+		kudoClient := operator.client.Kudo.KudoV1beta1()
 		i := operator.Instance
 		ov := operator.OperatorVersion
 		o := operator.Operator
-		timeoutSeconds := timeout.Round(time.Second).Milliseconds() / 1000
+		instanceTimeoutSec := timeout.Round(time.Second).Milliseconds() / 1000
 
-		err := waitForDeletion(kudoV1beta1.Instances(i.Namespace), i.ObjectMeta, timeoutSeconds)
+		const (
+			// after the instance is gone, these should in theory disappear quickly, since nothing should refer to them
+			operatorVersionTimeoutSec = 10
+			operatorTimeoutSec        = 10
+		)
+
+		err := waitForDeletion(kudoClient.Instances(i.Namespace), i.ObjectMeta, instanceTimeoutSec)
 		if err != nil {
 			return err
 		}
 
-		err = waitForDeletion(kudoV1beta1.OperatorVersions(ov.Namespace), ov.ObjectMeta, 10)
+		err = waitForDeletion(kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, operatorVersionTimeoutSec)
 		if err != nil {
 			return err
 		}
 
-		err = waitForDeletion(kudoV1beta1.Operators(o.Namespace), o.ObjectMeta, 10)
+		err = waitForDeletion(kudoClient.Operators(o.Namespace), o.ObjectMeta, operatorTimeoutSec)
 		if err != nil {
 			return err
 		}
