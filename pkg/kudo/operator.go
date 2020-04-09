@@ -180,6 +180,9 @@ func (operator Operator) Uninstall() error {
 // UninstallWaitForDeletion is the same as Uninstall but
 // initiates a foreground deletion, and waits for the KUDO resources to disappear.
 // Waits up to timeout for the instance to be deleted, and up to 10 seconds for each of OperatorVersion and Operator.
+//
+// Note that in the past some issues which were not fully understood were observed when using foreground deletion on
+// Instances, see https://github.com/kudobuilder/kudo/issues/1071
 func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	if operator.client.Kudo == nil {
 		return fmt.Errorf("operator is not initialized")
