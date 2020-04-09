@@ -2,6 +2,11 @@ package kudo
 
 import (
 	"fmt"
+	"time"
+
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/Masterminds/semver"
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
@@ -169,11 +174,26 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 // We assume that this is the intended behavior for most test cases.
 // Don't use this for test cases which have multiple Instances for a single OperatorVersion.
 func (operator Operator) Uninstall() error {
+	return operator.UninstallWaitForDeletion(0)
+}
+
+// UninstallWaitForDeletion is the same as Uninstall but
+// initiates a foreground deletion, and waits for the KUDO resources to disappear.
+// Waits up to timeout for the instance to be deleted, and up to 10 seconds for each of OperatorVersion and Operator.
+//
+// Note that in the past some issues which were not fully understood were observed when using foreground deletion on
+// Instances, see https://github.com/kudobuilder/kudo/issues/1071
+func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	if operator.client.Kudo == nil {
 		return fmt.Errorf("operator is not initialized")
 	}
 
 	options := metav1.DeleteOptions{}
+
+	if timeout != 0 {
+		propagationPolicy := metav1.DeletePropagationForeground
+		options.PropagationPolicy = &propagationPolicy
+	}
 
 	err := operator.client.Kudo.
 		KudoV1beta1().
@@ -211,7 +231,72 @@ func (operator Operator) Uninstall() error {
 			err)
 	}
 
+	if timeout != 0 {
+		kudoClient := operator.client.Kudo.KudoV1beta1()
+		i := operator.Instance
+		ov := operator.OperatorVersion
+		o := operator.Operator
+		instanceTimeoutSec := timeout.Round(time.Second).Milliseconds() / 1000
+
+		const (
+			// after the instance is gone, these should in theory disappear quickly, since nothing should refer to them
+			operatorVersionTimeoutSec = 10
+			operatorTimeoutSec        = 10
+		)
+
+		err := waitForDeletion(kudoClient.Instances(i.Namespace), i.ObjectMeta, instanceTimeoutSec)
+		if err != nil {
+			return err
+		}
+
+		err = waitForDeletion(kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, operatorVersionTimeoutSec)
+		if err != nil {
+			return err
+		}
+
+		err = waitForDeletion(kudoClient.Operators(o.Namespace), o.ObjectMeta, operatorTimeoutSec)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+type watcher interface {
+	Watch(ops metav1.ListOptions) (watch.Interface, error)
+}
+
+func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, timeoutSeconds int64) error {
+	listOptions := metav1.ListOptions{
+		ResourceVersion: objectMeta.ResourceVersion,
+		LabelSelector:   labels.SelectorFromSet(objectMeta.Labels).String(),
+		TimeoutSeconds:  &timeoutSeconds,
+	}
+
+	w, err := watcherInterface.Watch(listOptions)
+	if err != nil {
+		return fmt.Errorf("starting watch with %#v failed: %v", listOptions, err)
+	}
+
+	defer w.Stop()
+
+	for event := range w.ResultChan() {
+		o, err := runtime.DefaultUnstructuredConverter.ToUnstructured(event.Object)
+		if err != nil {
+			return fmt.Errorf("converting object event %#v to unstructured failed: %v", event.Object, err)
+		}
+
+		if event.Type != watch.Deleted {
+			continue
+		}
+
+		if o["metadata"].(map[string]interface{})["name"].(string) == objectMeta.Name {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("timed out waiting for deletion after %d seconds", timeoutSeconds)
 }
 
 // UpgradeBuilder tracks the options set for an upgrade.
