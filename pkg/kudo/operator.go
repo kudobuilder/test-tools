@@ -198,7 +198,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 		Delete(operator.Instance.Name, &options)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to delete Instance %s in namespace %s: %v",
+			"failed to delete Instance %s in namespace %s: %w",
 			operator.Instance.Name,
 			operator.Instance.Namespace,
 			err)
@@ -210,7 +210,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 		Delete(operator.OperatorVersion.Name, &options)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to delete OperatorVersion %s in namespace %s: %v",
+			"failed to delete OperatorVersion %s in namespace %s: %w",
 			operator.OperatorVersion.Name,
 			operator.OperatorVersion.Namespace,
 			err)
@@ -222,7 +222,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 		Delete(operator.Operator.Name, &options)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to delete Operator %s in namespace %s: %v",
+			"failed to delete Operator %s in namespace %s: %w",
 			operator.Operator.Name,
 			operator.Operator.Namespace,
 			err)
