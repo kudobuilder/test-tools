@@ -14,9 +14,10 @@ import (
 )
 
 func TestCollectArtifacts_Disabled(t *testing.T) {
-	artifactsDirectoryBase = ""
 	sb := strings.Builder{}
-	CollectArtifacts(nil, &sb, "", "", "")
+	debugDeps{
+		artifactsDirectoryBase: "",
+	}.collectArtifacts(nil, &sb, "", "", "")
 	assert.Equal(t, sb.String(), "collection of resources for debugging failed: $TEST_ARTIFACTS_DIRECTORY not set\n")
 }
 
@@ -32,8 +33,10 @@ type testStruct struct {
 }
 
 func TestCollectArtifacts(t *testing.T) {
-	artifactsDirectoryBase = "/artifacts"
-	now = func() time.Time { return time.Time{} }
+	d := debugDeps{
+		artifactsDirectoryBase: "/artifacts",
+		now:                    func() time.Time { return time.Time{} },
+	}
 	tests := []testStruct{
 		{
 			"zero api resources",
@@ -148,9 +151,9 @@ func TestCollectArtifacts(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
 			sb := strings.Builder{}
-			execCommand = getExecCommand(t, test)
+			d.execCommand = getExecCommand(t, test)
 
-			CollectArtifacts(fs, &sb, "ns", "kube.config", "kubectl")
+			d.collectArtifacts(fs, &sb, "ns", "kube.config", "kubectl")
 
 			assert.Equal(t, test.expectedOut, sb.String())
 			assert.NoError(t, afero.Walk(fs, "/", func(path string, info os.FileInfo, err error) error {
