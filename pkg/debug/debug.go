@@ -43,7 +43,8 @@ func (d debugDeps) collectArtifacts(fs afero.Fs, writer io.Writer, namespace, ku
 	}
 }
 
-func (d debugDeps) collectNamespacedResources(fs afero.Fs, writer io.Writer, namespace, kubeConfigPath, kubectlPath string) error {
+func (d debugDeps) collectNamespacedResources(
+	fs afero.Fs, writer io.Writer, namespace, kubeConfigPath, kubectlPath string) error {
 	if d.artifactsDirectoryBase == "" {
 		return fmt.Errorf("$%s not set", testArtifactsDirectoryVarName)
 	}
@@ -66,7 +67,8 @@ func (d debugDeps) collectNamespacedResources(fs afero.Fs, writer io.Writer, nam
 		return fmt.Errorf("fetching API resource types failed: %v", err)
 	}
 
-	artifactsDirectory := path.Join(d.artifactsDirectoryBase, fmt.Sprintf("%s-%s", namespace, d.now().Format(time.RFC3339)))
+	artifactsDirectory := path.Join(
+		d.artifactsDirectoryBase, fmt.Sprintf("%s-%s", namespace, d.now().Format(time.RFC3339)))
 
 	err = fs.MkdirAll(artifactsDirectory, 0777)
 	if err != nil {
@@ -118,7 +120,8 @@ func (d debugDeps) collectNamespacedResources(fs afero.Fs, writer io.Writer, nam
 	return nil
 }
 
-func (d debugDeps) collectResources(fs afero.Fs, writer io.Writer, wg *sync.WaitGroup, namespace, fileName, resourcesNames,
+func (d debugDeps) collectResources(
+	fs afero.Fs, writer io.Writer, wg *sync.WaitGroup, namespace, fileName, resourcesNames,
 	directoryName, kubectlPath, kubeConfigPath string) {
 	defer wg.Done()
 
