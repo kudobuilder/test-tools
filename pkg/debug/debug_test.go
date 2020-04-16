@@ -11,13 +11,15 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
 func TestCollectArtifacts_Disabled(t *testing.T) {
 	sb := strings.Builder{}
 	debugDeps{
 		artifactsDirectoryBase: "",
-	}.collectArtifacts(nil, &sb, "", "", "")
+	}.collectArtifacts(client.Client{}, nil, &sb, "", "")
 	assert.Equal(t, sb.String(), "collection of resources for debugging failed: $TEST_ARTIFACTS_DIRECTORY not set\n")
 }
 
@@ -153,7 +155,7 @@ func TestCollectArtifacts(t *testing.T) {
 			sb := strings.Builder{}
 			d.execCommand = getExecCommand(t, test)
 
-			d.collectArtifacts(fs, &sb, "ns", "kube.config", "kubectl")
+			d.collectArtifacts(client.Client{KubeConfigPath: "kube.config"}, fs, &sb, "ns", "kubectl")
 
 			assert.Equal(t, test.expectedOut, sb.String())
 			assert.NoError(t, afero.Walk(fs, "/", func(path string, info os.FileInfo, err error) error {

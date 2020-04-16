@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/spf13/afero"
+
+	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
 const (
@@ -27,24 +29,28 @@ type debugDeps struct {
 
 // CollectArtifacts collects useful debugging artifacts from a given namespace.
 // Should typically be called if CurrentGinkgoTestDescription().Failed, like this:
-//   debug.CollectArtifacts(afero.NewOsFs(), GinkgoWriter, TestNamespace, KubeConfigPath, KubectlPath)
-func CollectArtifacts(fs afero.Fs, writer io.Writer, namespace, kubeConfigPath, kubectlPath string) {
-	debugDeps{
+//   c, err := client.NewForConfig(KubeConfigPath)
+//   if err != nil ...
+//   debug.CollectArtifacts(c, afero.NewOsFs(), GinkgoWriter, TestNamespace, KubectlPath)
+// Note that this function emits encountered errors to the supplied writer, so there is only a need to inspect its
+// return value only if the caller wants to take some action in addition to printing the error.
+func CollectArtifacts(client client.Client, fs afero.Fs, writer io.Writer, namespace, kubectlPath string) error {
+	return debugDeps{
 		artifactsDirectoryBase: os.Getenv(testArtifactsDirectoryVarName),
 		execCommand:            exec.Command,
 		now:                    time.Now,
-	}.collectArtifacts(fs, writer, namespace, kubeConfigPath, kubectlPath)
+	}.collectArtifacts(client, fs, writer, namespace, kubectlPath)
 }
 
-func (d debugDeps) collectArtifacts(fs afero.Fs, writer io.Writer, namespace, kubeConfigPath, kubectlPath string) {
-	err := d.collectNamespacedResources(fs, writer, namespace, kubeConfigPath, kubectlPath)
+func (d debugDeps) collectArtifacts(client client.Client, fs afero.Fs, writer io.Writer, namespace, kubectlPath string) error {
+	err := d.collectNamespacedResources(client, fs, writer, namespace, kubectlPath)
 	if err != nil {
 		_, _ = fmt.Fprintf(writer, "collection of resources for debugging failed: %v\n", err)
 	}
+	return err
 }
 
-func (d debugDeps) collectNamespacedResources(
-	fs afero.Fs, writer io.Writer, namespace, kubeConfigPath, kubectlPath string) error {
+func (d debugDeps) collectNamespacedResources(client client.Client, fs afero.Fs, writer io.Writer, namespace, kubectlPath string) error {
 	if d.artifactsDirectoryBase == "" {
 		return fmt.Errorf("$%s not set", testArtifactsDirectoryVarName)
 	}
@@ -54,7 +60,7 @@ func (d debugDeps) collectNamespacedResources(
 	cmd := d.execCommand(
 		kubectlPath,
 		"--kubeconfig",
-		kubeConfigPath,
+		client.KubeConfigPath,
 		"api-resources",
 		"--verbs=list",
 		"--namespaced=true",
@@ -111,8 +117,7 @@ func (d debugDeps) collectNamespacedResources(
 
 		wg.Add(1)
 
-		go d.collectResources(fs, writer, &wg, namespace, fileName, resources,
-			artifactsDirectory, kubectlPath, kubeConfigPath)
+		go d.collectResources(client, fs, writer, &wg, namespace, fileName, resources, artifactsDirectory, kubectlPath)
 	}
 
 	wg.Wait()
@@ -120,9 +125,7 @@ func (d debugDeps) collectNamespacedResources(
 	return nil
 }
 
-func (d debugDeps) collectResources(
-	fs afero.Fs, writer io.Writer, wg *sync.WaitGroup, namespace, fileName, resourcesNames,
-	directoryName, kubectlPath, kubeConfigPath string) {
+func (d debugDeps) collectResources(client client.Client, fs afero.Fs, writer io.Writer, wg *sync.WaitGroup, namespace, fileName, resourcesNames, directoryName, kubectlPath string) {
 	defer wg.Done()
 
 	outPath := path.Join(directoryName, fileName)
@@ -133,7 +136,7 @@ func (d debugDeps) collectResources(
 		return
 	}
 
-	cmd := d.execCommand(kubectlPath, "--kubeconfig", kubeConfigPath, "get", resourcesNames,
+	cmd := d.execCommand(kubectlPath, "--kubeconfig", client.KubeConfigPath, "get", resourcesNames,
 		"--namespace", namespace, "--ignore-not-found", "-o", "yaml")
 	cmd.Stdout = output
 	cmd.Stderr = writer
