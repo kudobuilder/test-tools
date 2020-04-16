@@ -20,7 +20,7 @@ func TestCollectArtifacts_Disabled(t *testing.T) {
 	err := debugDeps{
 		artifactsDirectoryBase: "",
 	}.collectArtifacts(client.Client{}, nil, &sb, "", "")
-	assert.NoError(t, err)
+	assert.EqualError(t, err, "$TEST_ARTIFACTS_DIRECTORY not set")
 	assert.Equal(t, sb.String(), "collection of resources for debugging failed: $TEST_ARTIFACTS_DIRECTORY not set\n")
 }
 
