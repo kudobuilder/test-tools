@@ -13,6 +13,8 @@ type Client struct {
 	Kubernetes kubernetes.Interface
 	Kudo       kudo.Interface
 	Config     rest.Config
+	// may be empty in the "in cluster" case
+	KubeConfigPath string
 }
 
 // NewForConfig creates a Client using a kubeconfig path.
@@ -33,9 +35,10 @@ func NewForConfig(kubeconfigPath string) (Client, error) {
 	}
 
 	return Client{
-		Kubernetes: kubernetesClient,
-		Kudo:       kudoClient,
-		Config:     *config,
+		Kubernetes:     kubernetesClient,
+		Kudo:           kudoClient,
+		Config:         *config,
+		KubeConfigPath: kubeconfigPath,
 	}, nil
 }
 
