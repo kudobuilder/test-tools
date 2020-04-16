@@ -42,15 +42,18 @@ func CollectArtifacts(client client.Client, fs afero.Fs, writer io.Writer, names
 	}.collectArtifacts(client, fs, writer, namespace, kubectlPath)
 }
 
-func (d debugDeps) collectArtifacts(client client.Client, fs afero.Fs, writer io.Writer, namespace, kubectlPath string) error {
+func (d debugDeps) collectArtifacts(
+	client client.Client, fs afero.Fs, writer io.Writer, namespace, kubectlPath string) error {
 	err := d.collectNamespacedResources(client, fs, writer, namespace, kubectlPath)
 	if err != nil {
 		_, _ = fmt.Fprintf(writer, "collection of resources for debugging failed: %v\n", err)
 	}
+
 	return err
 }
 
-func (d debugDeps) collectNamespacedResources(client client.Client, fs afero.Fs, writer io.Writer, namespace, kubectlPath string) error {
+func (d debugDeps) collectNamespacedResources(
+	client client.Client, fs afero.Fs, writer io.Writer, namespace, kubectlPath string) error {
 	if d.artifactsDirectoryBase == "" {
 		return fmt.Errorf("$%s not set", testArtifactsDirectoryVarName)
 	}
@@ -125,7 +128,15 @@ func (d debugDeps) collectNamespacedResources(client client.Client, fs afero.Fs,
 	return nil
 }
 
-func (d debugDeps) collectResources(client client.Client, fs afero.Fs, writer io.Writer, wg *sync.WaitGroup, namespace, fileName, resourcesNames, directoryName, kubectlPath string) {
+func (d debugDeps) collectResources(
+	client client.Client,
+	fs afero.Fs,
+	writer io.Writer,
+	wg *sync.WaitGroup,
+	namespace, fileName,
+	resourcesNames,
+	directoryName,
+	kubectlPath string) {
 	defer wg.Done()
 
 	outPath := path.Join(directoryName, fileName)

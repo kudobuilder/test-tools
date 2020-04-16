@@ -17,9 +17,10 @@ import (
 
 func TestCollectArtifacts_Disabled(t *testing.T) {
 	sb := strings.Builder{}
-	debugDeps{
+	err := debugDeps{
 		artifactsDirectoryBase: "",
 	}.collectArtifacts(client.Client{}, nil, &sb, "", "")
+	assert.NoError(t, err)
 	assert.Equal(t, sb.String(), "collection of resources for debugging failed: $TEST_ARTIFACTS_DIRECTORY not set\n")
 }
 
@@ -155,7 +156,8 @@ func TestCollectArtifacts(t *testing.T) {
 			sb := strings.Builder{}
 			d.execCommand = getExecCommand(t, test)
 
-			d.collectArtifacts(client.Client{KubeConfigPath: "kube.config"}, fs, &sb, "ns", "kubectl")
+			err := d.collectArtifacts(client.Client{KubeConfigPath: "kube.config"}, fs, &sb, "ns", "kubectl")
+			assert.NoError(t, err)
 
 			assert.Equal(t, test.expectedOut, sb.String())
 			assert.NoError(t, afero.Walk(fs, "/", func(path string, info os.FileInfo, err error) error {
