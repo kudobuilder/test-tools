@@ -157,7 +157,11 @@ type WaitConfig struct {
 	Retry   time.Duration
 }
 
-func (instance *Instance) WaitForPlanInStatus(plan string, status kudov1beta1.ExecutionStatus, config WaitConfig) error {
+// WaitForPlanInStatus waits for an instance plan status to reach a status.
+func (instance *Instance) WaitForPlanInStatus(
+	plan string,
+	status kudov1beta1.ExecutionStatus,
+	config WaitConfig) error {
 	ctx, cancel := context.WithTimeout(context.TODO(), config.Timeout)
 	defer cancel()
 
@@ -178,6 +182,7 @@ func (instance *Instance) WaitForPlanInProgress(plan string, options ...WaitOpti
 	for _, option := range options {
 		option(&config)
 	}
+
 	return instance.WaitForPlanInStatus(plan, kudov1beta1.ExecutionInProgress, config)
 }
 
@@ -188,13 +193,15 @@ func (instance *Instance) WaitForPlanComplete(plan string, options ...WaitOption
 		Timeout: time.Minute * 5,
 		Retry:   time.Second * 10,
 	}
+
 	for _, option := range options {
 		option(&config)
 	}
+
 	return instance.WaitForPlanInStatus(plan, kudov1beta1.ExecutionComplete, config)
 }
 
-// WaitForPlanComplete waits up to 5 minutes for an instance plan status to be completed.
+// WaitForPlanFailure waits for an instance plan status to be in ExecutionFatalError.
 // By default it waits for 5 minutes unless overridden with a WaitTimeout.
 func (instance *Instance) WaitForPlanFailure(plan string, options ...WaitOption) error {
 	config := WaitConfig{
@@ -205,6 +212,7 @@ func (instance *Instance) WaitForPlanFailure(plan string, options ...WaitOption)
 	for _, option := range options {
 		option(&config)
 	}
+
 	return instance.WaitForPlanInStatus(plan, kudov1beta1.ExecutionFatalError, config)
 }
 
