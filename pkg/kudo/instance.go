@@ -154,6 +154,17 @@ func (instance *Instance) WaitForPlanStatus(
 // WaitConfig is used to configure instance wait calls.
 type WaitConfig struct {
 	Timeout time.Duration
+	Retry   time.Duration
+}
+
+func (instance *Instance) WaitForPlanInStatus(plan string, status kudov1beta1.ExecutionStatus, config WaitConfig) error {
+	ctx, cancel := context.WithTimeout(context.TODO(), config.Timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(config.Retry)
+	defer ticker.Stop()
+
+	return instance.WaitForPlanStatus(ctx, ticker, plan, status)
 }
 
 // WaitForPlanInProgress waits for an instance plan status to be in progress.
@@ -161,19 +172,13 @@ type WaitConfig struct {
 func (instance *Instance) WaitForPlanInProgress(plan string, options ...WaitOption) error {
 	config := WaitConfig{
 		Timeout: time.Second * 30,
+		Retry:   time.Second * 3,
 	}
 
 	for _, option := range options {
 		option(&config)
 	}
-
-	ctx, cancel := context.WithTimeout(context.TODO(), config.Timeout)
-	defer cancel()
-
-	ticker := time.NewTicker(time.Second * 3)
-	defer ticker.Stop()
-
-	return instance.WaitForPlanStatus(ctx, ticker, plan, kudov1beta1.ExecutionInProgress)
+	return instance.WaitForPlanInStatus(plan, kudov1beta1.ExecutionInProgress, config)
 }
 
 // WaitForPlanComplete waits up to 5 minutes for an instance plan status to be completed.
@@ -181,19 +186,26 @@ func (instance *Instance) WaitForPlanInProgress(plan string, options ...WaitOpti
 func (instance *Instance) WaitForPlanComplete(plan string, options ...WaitOption) error {
 	config := WaitConfig{
 		Timeout: time.Minute * 5,
+		Retry:   time.Second * 10,
+	}
+	for _, option := range options {
+		option(&config)
+	}
+	return instance.WaitForPlanInStatus(plan, kudov1beta1.ExecutionComplete, config)
+}
+
+// WaitForPlanComplete waits up to 5 minutes for an instance plan status to be completed.
+// By default it waits for 5 minutes unless overridden with a WaitTimeout.
+func (instance *Instance) WaitForPlanFailure(plan string, options ...WaitOption) error {
+	config := WaitConfig{
+		Timeout: time.Minute * 5,
+		Retry:   time.Second * 10,
 	}
 
 	for _, option := range options {
 		option(&config)
 	}
-
-	ctx, cancel := context.WithTimeout(context.TODO(), config.Timeout)
-	defer cancel()
-
-	ticker := time.NewTicker(time.Second * 10)
-	defer ticker.Stop()
-
-	return instance.WaitForPlanStatus(ctx, ticker, plan, kudov1beta1.ExecutionComplete)
+	return instance.WaitForPlanInStatus(plan, kudov1beta1.ExecutionFatalError, config)
 }
 
 // Update gets the current instance state.
