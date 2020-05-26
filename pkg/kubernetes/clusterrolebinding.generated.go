@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // ClusterRoleBinding wraps a Kubernetes ClusterRoleBinding.
 type ClusterRoleBinding struct {
 	rbacv1.ClusterRoleBinding
@@ -31,7 +30,7 @@ func NewClusterRoleBinding(client client.Client, clusterrolebinding rbacv1.Clust
 
 	return ClusterRoleBinding{
 		ClusterRoleBinding: *createdClusterRoleBinding,
-		client: client,
+		client:             client,
 	}, nil
 }
 
@@ -49,7 +48,7 @@ func GetClusterRoleBinding(client client.Client, name string) (ClusterRoleBindin
 
 	return ClusterRoleBinding{
 		ClusterRoleBinding: *clusterrolebinding,
-		client: client,
+		client:             client,
 	}, nil
 }
 
@@ -70,7 +69,7 @@ func ListClusterRoleBindings(client client.Client) ([]ClusterRoleBinding, error)
 	for _, item := range list.Items {
 		clusterrolebindings = append(clusterrolebindings, ClusterRoleBinding{
 			ClusterRoleBinding: item,
-			client: client,
+			client:             client,
 		})
 	}
 
@@ -102,6 +101,21 @@ func (clusterrolebinding *ClusterRoleBinding) Update() error {
 		Get(clusterrolebinding.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update clusterrolebinding %s: %w", clusterrolebinding.Name, err)
+	}
+
+	clusterrolebinding.ClusterRoleBinding = *update
+
+	return nil
+}
+
+// Save saves the current ClusterRoleBinding.
+func (clusterrolebinding *ClusterRoleBinding) Save() error {
+	update, err := clusterrolebinding.client.Kubernetes.
+		RbacV1().
+		ClusterRoleBindings().
+		Update(&clusterrolebinding.ClusterRoleBinding)
+	if err != nil {
+		return fmt.Errorf("failed to save clusterrolebinding %s: %w", clusterrolebinding.Name, err)
 	}
 
 	clusterrolebinding.ClusterRoleBinding = *update

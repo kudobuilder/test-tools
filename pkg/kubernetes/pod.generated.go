@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // Pod wraps a Kubernetes Pod.
 type Pod struct {
 	corev1.Pod
@@ -30,7 +29,7 @@ func NewPod(client client.Client, pod corev1.Pod) (Pod, error) {
 	}
 
 	return Pod{
-		Pod: *createdPod,
+		Pod:    *createdPod,
 		client: client,
 	}, nil
 }
@@ -48,7 +47,7 @@ func GetPod(client client.Client, name string, namespace string) (Pod, error) {
 	}
 
 	return Pod{
-		Pod: *pod,
+		Pod:    *pod,
 		client: client,
 	}, nil
 }
@@ -69,7 +68,7 @@ func ListPods(client client.Client, namespace string) ([]Pod, error) {
 
 	for _, item := range list.Items {
 		pods = append(pods, Pod{
-			Pod: item,
+			Pod:    item,
 			client: client,
 		})
 	}
@@ -102,6 +101,21 @@ func (pod *Pod) Update() error {
 		Get(pod.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update pod %s in namespace %s: %w", pod.Name, pod.Namespace, err)
+	}
+
+	pod.Pod = *update
+
+	return nil
+}
+
+// Save saves the current Pod.
+func (pod *Pod) Save() error {
+	update, err := pod.client.Kubernetes.
+		CoreV1().
+		Pods(pod.Namespace).
+		Update(&pod.Pod)
+	if err != nil {
+		return fmt.Errorf("failed to save pod %s in namespace %s: %w", pod.Name, pod.Namespace, err)
 	}
 
 	pod.Pod = *update

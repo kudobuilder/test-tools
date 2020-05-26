@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // ServiceAccount wraps a Kubernetes ServiceAccount.
 type ServiceAccount struct {
 	corev1.ServiceAccount
@@ -31,7 +30,7 @@ func NewServiceAccount(client client.Client, serviceaccount corev1.ServiceAccoun
 
 	return ServiceAccount{
 		ServiceAccount: *createdServiceAccount,
-		client: client,
+		client:         client,
 	}, nil
 }
 
@@ -49,7 +48,7 @@ func GetServiceAccount(client client.Client, name string, namespace string) (Ser
 
 	return ServiceAccount{
 		ServiceAccount: *serviceaccount,
-		client: client,
+		client:         client,
 	}, nil
 }
 
@@ -70,7 +69,7 @@ func ListServiceAccounts(client client.Client, namespace string) ([]ServiceAccou
 	for _, item := range list.Items {
 		serviceaccounts = append(serviceaccounts, ServiceAccount{
 			ServiceAccount: item,
-			client: client,
+			client:         client,
 		})
 	}
 
@@ -102,6 +101,21 @@ func (serviceaccount *ServiceAccount) Update() error {
 		Get(serviceaccount.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update serviceaccount %s in namespace %s: %w", serviceaccount.Name, serviceaccount.Namespace, err)
+	}
+
+	serviceaccount.ServiceAccount = *update
+
+	return nil
+}
+
+// Save saves the current ServiceAccount.
+func (serviceaccount *ServiceAccount) Save() error {
+	update, err := serviceaccount.client.Kubernetes.
+		CoreV1().
+		ServiceAccounts(serviceaccount.Namespace).
+		Update(&serviceaccount.ServiceAccount)
+	if err != nil {
+		return fmt.Errorf("failed to save serviceaccount %s in namespace %s: %w", serviceaccount.Name, serviceaccount.Namespace, err)
 	}
 
 	serviceaccount.ServiceAccount = *update

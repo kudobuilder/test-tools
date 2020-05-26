@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // ClusterRole wraps a Kubernetes ClusterRole.
 type ClusterRole struct {
 	rbacv1.ClusterRole
@@ -31,7 +30,7 @@ func NewClusterRole(client client.Client, clusterrole rbacv1.ClusterRole) (Clust
 
 	return ClusterRole{
 		ClusterRole: *createdClusterRole,
-		client: client,
+		client:      client,
 	}, nil
 }
 
@@ -49,7 +48,7 @@ func GetClusterRole(client client.Client, name string) (ClusterRole, error) {
 
 	return ClusterRole{
 		ClusterRole: *clusterrole,
-		client: client,
+		client:      client,
 	}, nil
 }
 
@@ -70,7 +69,7 @@ func ListClusterRoles(client client.Client) ([]ClusterRole, error) {
 	for _, item := range list.Items {
 		clusterroles = append(clusterroles, ClusterRole{
 			ClusterRole: item,
-			client: client,
+			client:      client,
 		})
 	}
 
@@ -102,6 +101,21 @@ func (clusterrole *ClusterRole) Update() error {
 		Get(clusterrole.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update clusterrole %s: %w", clusterrole.Name, err)
+	}
+
+	clusterrole.ClusterRole = *update
+
+	return nil
+}
+
+// Save saves the current ClusterRole.
+func (clusterrole *ClusterRole) Save() error {
+	update, err := clusterrole.client.Kubernetes.
+		RbacV1().
+		ClusterRoles().
+		Update(&clusterrole.ClusterRole)
+	if err != nil {
+		return fmt.Errorf("failed to save clusterrole %s: %w", clusterrole.Name, err)
 	}
 
 	clusterrole.ClusterRole = *update
