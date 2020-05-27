@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // Service wraps a Kubernetes Service.
 type Service struct {
 	corev1.Service
@@ -31,7 +30,7 @@ func NewService(client client.Client, service corev1.Service) (Service, error) {
 
 	return Service{
 		Service: *createdService,
-		client: client,
+		client:  client,
 	}, nil
 }
 
@@ -49,7 +48,7 @@ func GetService(client client.Client, name string, namespace string) (Service, e
 
 	return Service{
 		Service: *service,
-		client: client,
+		client:  client,
 	}, nil
 }
 
@@ -70,7 +69,7 @@ func ListServices(client client.Client, namespace string) ([]Service, error) {
 	for _, item := range list.Items {
 		services = append(services, Service{
 			Service: item,
-			client: client,
+			client:  client,
 		})
 	}
 
@@ -102,6 +101,21 @@ func (service *Service) Update() error {
 		Get(service.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update service %s in namespace %s: %w", service.Name, service.Namespace, err)
+	}
+
+	service.Service = *update
+
+	return nil
+}
+
+// Save saves the current Service.
+func (service *Service) Save() error {
+	update, err := service.client.Kubernetes.
+		CoreV1().
+		Services(service.Namespace).
+		Update(&service.Service)
+	if err != nil {
+		return fmt.Errorf("failed to save service %s in namespace %s: %w", service.Name, service.Namespace, err)
 	}
 
 	service.Service = *update

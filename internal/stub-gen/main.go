@@ -121,6 +121,21 @@ func ({{ .Type | toLower }} *{{ .Type }}) Update() error {
 
 	return nil
 }
+
+// Save saves the current {{ .Type }}.
+func ({{ .Type | toLower }} *{{ .Type }}) Save() error {
+	update, err := {{ .Type | toLower }}.client.Kubernetes.
+		{{ .API }}().
+		{{ .Type }}s({{ if .HasNamespace }}{{ .Type | toLower }}.Namespace{{ end }}).
+		Update(&{{ .Type | toLower }}.{{ .Type }})
+	if err != nil {
+		return fmt.Errorf("failed to save {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ .Type | toLower }}.Name, {{ if .HasNamespace }}{{ .Type | toLower}}.Namespace, {{ end }}err)
+	}
+
+	{{ .Type | toLower }}.{{ .Type }} = *update
+
+	return nil
+}
 `
 
 type parameters struct {

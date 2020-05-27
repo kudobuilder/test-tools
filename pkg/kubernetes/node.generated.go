@@ -108,3 +108,18 @@ func (node *Node) Update() error {
 
 	return nil
 }
+
+// Save saves the current Node.
+func (node *Node) Save() error {
+	update, err := node.client.Kubernetes.
+		CoreV1().
+		Nodes().
+		Update(&node.Node)
+	if err != nil {
+		return fmt.Errorf("failed to save node %s: %w", node.Name, err)
+	}
+
+	node.Node = *update
+
+	return nil
+}

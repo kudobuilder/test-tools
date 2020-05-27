@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // Role wraps a Kubernetes Role.
 type Role struct {
 	rbacv1.Role
@@ -30,7 +29,7 @@ func NewRole(client client.Client, role rbacv1.Role) (Role, error) {
 	}
 
 	return Role{
-		Role: *createdRole,
+		Role:   *createdRole,
 		client: client,
 	}, nil
 }
@@ -48,7 +47,7 @@ func GetRole(client client.Client, name string, namespace string) (Role, error) 
 	}
 
 	return Role{
-		Role: *role,
+		Role:   *role,
 		client: client,
 	}, nil
 }
@@ -69,7 +68,7 @@ func ListRoles(client client.Client, namespace string) ([]Role, error) {
 
 	for _, item := range list.Items {
 		roles = append(roles, Role{
-			Role: item,
+			Role:   item,
 			client: client,
 		})
 	}
@@ -102,6 +101,21 @@ func (role *Role) Update() error {
 		Get(role.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update role %s in namespace %s: %w", role.Name, role.Namespace, err)
+	}
+
+	role.Role = *update
+
+	return nil
+}
+
+// Save saves the current Role.
+func (role *Role) Save() error {
+	update, err := role.client.Kubernetes.
+		RbacV1().
+		Roles(role.Namespace).
+		Update(&role.Role)
+	if err != nil {
+		return fmt.Errorf("failed to save role %s in namespace %s: %w", role.Name, role.Namespace, err)
 	}
 
 	role.Role = *update

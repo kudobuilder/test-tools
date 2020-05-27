@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // PersistentVolumeClaim wraps a Kubernetes PersistentVolumeClaim.
 type PersistentVolumeClaim struct {
 	corev1.PersistentVolumeClaim
@@ -31,7 +30,7 @@ func NewPersistentVolumeClaim(client client.Client, persistentvolumeclaim corev1
 
 	return PersistentVolumeClaim{
 		PersistentVolumeClaim: *createdPersistentVolumeClaim,
-		client: client,
+		client:                client,
 	}, nil
 }
 
@@ -49,7 +48,7 @@ func GetPersistentVolumeClaim(client client.Client, name string, namespace strin
 
 	return PersistentVolumeClaim{
 		PersistentVolumeClaim: *persistentvolumeclaim,
-		client: client,
+		client:                client,
 	}, nil
 }
 
@@ -70,7 +69,7 @@ func ListPersistentVolumeClaims(client client.Client, namespace string) ([]Persi
 	for _, item := range list.Items {
 		persistentvolumeclaims = append(persistentvolumeclaims, PersistentVolumeClaim{
 			PersistentVolumeClaim: item,
-			client: client,
+			client:                client,
 		})
 	}
 
@@ -102,6 +101,21 @@ func (persistentvolumeclaim *PersistentVolumeClaim) Update() error {
 		Get(persistentvolumeclaim.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update persistentvolumeclaim %s in namespace %s: %w", persistentvolumeclaim.Name, persistentvolumeclaim.Namespace, err)
+	}
+
+	persistentvolumeclaim.PersistentVolumeClaim = *update
+
+	return nil
+}
+
+// Save saves the current PersistentVolumeClaim.
+func (persistentvolumeclaim *PersistentVolumeClaim) Save() error {
+	update, err := persistentvolumeclaim.client.Kubernetes.
+		CoreV1().
+		PersistentVolumeClaims(persistentvolumeclaim.Namespace).
+		Update(&persistentvolumeclaim.PersistentVolumeClaim)
+	if err != nil {
+		return fmt.Errorf("failed to save persistentvolumeclaim %s in namespace %s: %w", persistentvolumeclaim.Name, persistentvolumeclaim.Namespace, err)
 	}
 
 	persistentvolumeclaim.PersistentVolumeClaim = *update

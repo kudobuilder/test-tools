@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // Secret wraps a Kubernetes Secret.
 type Secret struct {
 	corev1.Secret
@@ -102,6 +101,21 @@ func (secret *Secret) Update() error {
 		Get(secret.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update secret %s in namespace %s: %w", secret.Name, secret.Namespace, err)
+	}
+
+	secret.Secret = *update
+
+	return nil
+}
+
+// Save saves the current Secret.
+func (secret *Secret) Save() error {
+	update, err := secret.client.Kubernetes.
+		CoreV1().
+		Secrets(secret.Namespace).
+		Update(&secret.Secret)
+	if err != nil {
+		return fmt.Errorf("failed to save secret %s in namespace %s: %w", secret.Name, secret.Namespace, err)
 	}
 
 	secret.Secret = *update
