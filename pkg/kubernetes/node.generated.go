@@ -11,6 +11,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
+
 // Node wraps a Kubernetes Node.
 type Node struct {
 	corev1.Node
@@ -29,7 +30,7 @@ func NewNode(client client.Client, node corev1.Node) (Node, error) {
 	}
 
 	return Node{
-		Node:   *createdNode,
+		Node: *createdNode,
 		client: client,
 	}, nil
 }
@@ -47,7 +48,7 @@ func GetNode(client client.Client, name string) (Node, error) {
 	}
 
 	return Node{
-		Node:   *node,
+		Node: *node,
 		client: client,
 	}, nil
 }
@@ -68,7 +69,7 @@ func ListNodes(client client.Client) ([]Node, error) {
 
 	for _, item := range list.Items {
 		nodes = append(nodes, Node{
-			Node:   item,
+			Node: item,
 			client: client,
 		})
 	}
