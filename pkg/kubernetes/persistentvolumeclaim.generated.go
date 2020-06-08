@@ -11,6 +11,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
+
 // PersistentVolumeClaim wraps a Kubernetes PersistentVolumeClaim.
 type PersistentVolumeClaim struct {
 	corev1.PersistentVolumeClaim
@@ -30,7 +31,7 @@ func NewPersistentVolumeClaim(client client.Client, persistentvolumeclaim corev1
 
 	return PersistentVolumeClaim{
 		PersistentVolumeClaim: *createdPersistentVolumeClaim,
-		client:                client,
+		client: client,
 	}, nil
 }
 
@@ -48,7 +49,7 @@ func GetPersistentVolumeClaim(client client.Client, name string, namespace strin
 
 	return PersistentVolumeClaim{
 		PersistentVolumeClaim: *persistentvolumeclaim,
-		client:                client,
+		client: client,
 	}, nil
 }
 
@@ -69,7 +70,7 @@ func ListPersistentVolumeClaims(client client.Client, namespace string) ([]Persi
 	for _, item := range list.Items {
 		persistentvolumeclaims = append(persistentvolumeclaims, PersistentVolumeClaim{
 			PersistentVolumeClaim: item,
-			client:                client,
+			client: client,
 		})
 	}
 

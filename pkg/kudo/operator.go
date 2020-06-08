@@ -10,6 +10,8 @@ import (
 
 	"github.com/Masterminds/semver"
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
+	cmd_install "github.com/kudobuilder/kudo/pkg/kudoctl/cmd/install"
+	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/install"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/resolver"
 	kudooperator "github.com/kudobuilder/kudo/pkg/kudoctl/util/kudo"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/util/repo"
@@ -77,6 +79,7 @@ type OperatorBuilder struct {
 	OperatorVersion *semver.Version
 	AppVersion      *semver.Version
 	Parameters      map[string]string
+	Options         cmd_install.Options
 }
 
 // InstallOperator installs a KUDO operator package.
@@ -152,17 +155,19 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 		return Operator{}, fmt.Errorf("failed to resolve operator %s: %w", builder.Name, err)
 	}
 
-	kudoClient := kudooperator.NewClientFromK8s(client.Kudo)
+	kudoClient := kudooperator.NewClientFromK8s(client.Kudo, client.Kubernetes)
 
-	err = kudooperator.InstallPackage(
-		kudoClient,
-		pkg.Resources,
-		false,
-		builder.Instance,
-		builder.Namespace,
-		builder.Parameters,
-		false,
-		time.Duration(0))
+	installOpts := install.Options{
+		SkipInstance:    builder.Options.SkipInstance,
+		CreateNamespace: builder.Options.CreateNameSpace,
+	}
+
+	if builder.Options.Wait {
+		waitDuration := time.Duration(builder.Options.WaitTime) * time.Second
+		installOpts.Wait = &waitDuration
+	}
+
+	err = install.Package(kudoClient, builder.Instance, builder.Namespace, *pkg.Resources, builder.Parameters, installOpts)
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to install operator %s: %w", builder.Name, err)
 	}
@@ -365,7 +370,7 @@ func (builder UpgradeBuilder) Do(operator *Operator) error {
 		return fmt.Errorf("failed to resolve operator %s: %w", name, err)
 	}
 
-	kudoClient := kudooperator.NewClientFromK8s(operator.client.Kudo)
+	kudoClient := kudooperator.NewClientFromK8s(operator.client.Kudo, operator.client.Kubernetes)
 
 	err = kudooperator.UpgradeOperatorVersion(
 		kudoClient,

@@ -8,7 +8,7 @@ require (
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
-	github.com/kudobuilder/kudo v0.13.0
+	github.com/kudobuilder/kudo v0.14.0
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/spf13/afero v1.2.2

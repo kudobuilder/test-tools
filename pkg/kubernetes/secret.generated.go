@@ -11,6 +11,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
+
 // Secret wraps a Kubernetes Secret.
 type Secret struct {
 	corev1.Secret
