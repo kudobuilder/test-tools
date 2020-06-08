@@ -11,6 +11,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
+
 // StatefulSet wraps a Kubernetes StatefulSet.
 type StatefulSet struct {
 	appsv1.StatefulSet
@@ -30,7 +31,7 @@ func NewStatefulSet(client client.Client, statefulset appsv1.StatefulSet) (State
 
 	return StatefulSet{
 		StatefulSet: *createdStatefulSet,
-		client:      client,
+		client: client,
 	}, nil
 }
 
@@ -48,7 +49,7 @@ func GetStatefulSet(client client.Client, name string, namespace string) (Statef
 
 	return StatefulSet{
 		StatefulSet: *statefulset,
-		client:      client,
+		client: client,
 	}, nil
 }
 
@@ -69,7 +70,7 @@ func ListStatefulSets(client client.Client, namespace string) ([]StatefulSet, er
 	for _, item := range list.Items {
 		statefulsets = append(statefulsets, StatefulSet{
 			StatefulSet: item,
-			client:      client,
+			client: client,
 		})
 	}
 

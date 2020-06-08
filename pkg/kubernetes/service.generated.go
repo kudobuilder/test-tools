@@ -11,6 +11,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
+
 // Service wraps a Kubernetes Service.
 type Service struct {
 	corev1.Service
@@ -30,7 +31,7 @@ func NewService(client client.Client, service corev1.Service) (Service, error) {
 
 	return Service{
 		Service: *createdService,
-		client:  client,
+		client: client,
 	}, nil
 }
 
@@ -48,7 +49,7 @@ func GetService(client client.Client, name string, namespace string) (Service, e
 
 	return Service{
 		Service: *service,
-		client:  client,
+		client: client,
 	}, nil
 }
 
@@ -69,7 +70,7 @@ func ListServices(client client.Client, namespace string) ([]Service, error) {
 	for _, item := range list.Items {
 		services = append(services, Service{
 			Service: item,
-			client:  client,
+			client: client,
 		})
 	}
 

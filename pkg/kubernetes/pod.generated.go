@@ -11,6 +11,7 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
+
 // Pod wraps a Kubernetes Pod.
 type Pod struct {
 	corev1.Pod
@@ -29,7 +30,7 @@ func NewPod(client client.Client, pod corev1.Pod) (Pod, error) {
 	}
 
 	return Pod{
-		Pod:    *createdPod,
+		Pod: *createdPod,
 		client: client,
 	}, nil
 }
@@ -47,7 +48,7 @@ func GetPod(client client.Client, name string, namespace string) (Pod, error) {
 	}
 
 	return Pod{
-		Pod:    *pod,
+		Pod: *pod,
 		client: client,
 	}, nil
 }
@@ -68,7 +69,7 @@ func ListPods(client client.Client, namespace string) ([]Pod, error) {
 
 	for _, item := range list.Items {
 		pods = append(pods, Pod{
-			Pod:    item,
+			Pod: item,
 			client: client,
 		})
 	}
