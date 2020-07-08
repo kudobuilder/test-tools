@@ -1,9 +1,12 @@
 package kudo
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/install"
+	"github.com/kudobuilder/kudo/pkg/kudoctl/resources/upgrade"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -11,7 +14,6 @@ import (
 	"github.com/Masterminds/semver"
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
 	cmd_install "github.com/kudobuilder/kudo/pkg/kudoctl/cmd/install"
-	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/install"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/resolver"
 	kudooperator "github.com/kudobuilder/kudo/pkg/kudoctl/util/kudo"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/util/repo"
@@ -36,7 +38,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	i, err := client.Kudo.
 		KudoV1beta1().
 		Instances(namespace).
-		Get(instance, options)
+		Get(context.TODO(), instance, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to get Instance %s in namespace %s: %w", instance, namespace, err)
 	}
@@ -44,7 +46,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	ov, err := client.Kudo.
 		KudoV1beta1().
 		OperatorVersions(namespace).
-		Get(i.Spec.OperatorVersion.Name, options)
+		Get(context.TODO(), i.Spec.OperatorVersion.Name, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf(
 			"failed to get OperatorVersion %s in namespace %s: %w", i.Spec.OperatorVersion.Name, namespace, err)
@@ -53,7 +55,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	o, err := client.Kudo.
 		KudoV1beta1().
 		Operators(namespace).
-		Get(ov.Spec.Operator.Name, options)
+		Get(context.TODO(), ov.Spec.Operator.Name, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf(
 			"failed to get Operator %s in namespace %s: %w", ov.Spec.Operator.Name, namespace, err)
@@ -167,7 +169,7 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 		installOpts.Wait = &waitDuration
 	}
 
-	err = install.Package(kudoClient, builder.Instance, builder.Namespace, *pkg.Resources, builder.Parameters, installOpts)
+	err = install.Package(kudoClient, builder.Instance, builder.Namespace, *pkg.Resources, builder.Parameters, r, installOpts)
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to install operator %s: %w", builder.Name, err)
 	}
@@ -204,7 +206,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	err := operator.client.Kudo.
 		KudoV1beta1().
 		Instances(operator.Instance.Namespace).
-		Delete(operator.Instance.Name, &options)
+		Delete(context.TODO(), operator.Instance.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete Instance %s in namespace %s: %w",
@@ -216,7 +218,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	err = operator.client.Kudo.
 		KudoV1beta1().
 		OperatorVersions(operator.OperatorVersion.Namespace).
-		Delete(operator.OperatorVersion.Name, &options)
+		Delete(context.TODO(), operator.OperatorVersion.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete OperatorVersion %s in namespace %s: %w",
@@ -228,7 +230,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	err = operator.client.Kudo.
 		KudoV1beta1().
 		Operators(operator.Operator.Namespace).
-		Delete(operator.Operator.Name, &options)
+		Delete(context.TODO(), operator.Operator.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete Operator %s in namespace %s: %w",
@@ -270,7 +272,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 }
 
 type watcher interface {
-	Watch(ops metav1.ListOptions) (watch.Interface, error)
+	Watch(ctx context.Context, ops metav1.ListOptions) (watch.Interface, error)
 }
 
 func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, timeoutSeconds int64) error {
@@ -280,7 +282,7 @@ func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, tim
 		TimeoutSeconds:  &timeoutSeconds,
 	}
 
-	w, err := watcherInterface.Watch(listOptions)
+	w, err := watcherInterface.Watch(context.TODO(), listOptions)
 	if err != nil {
 		return fmt.Errorf("starting watch with %#v failed: %v", listOptions, err)
 	}
@@ -372,12 +374,13 @@ func (builder UpgradeBuilder) Do(operator *Operator) error {
 
 	kudoClient := kudooperator.NewClientFromK8s(operator.client.Kudo, operator.client.Kubernetes)
 
-	err = kudooperator.UpgradeOperatorVersion(
+	err = upgrade.OperatorVersion(
 		kudoClient,
 		pkg.Resources.OperatorVersion,
 		operator.Instance.Name,
-		operator.Instance.Namespace,
-		builder.Parameters)
+		builder.Parameters,
+		resolver.New(repository))
+
 	if err != nil {
 		return fmt.Errorf(
 			"failed to upgrade OperatorVersion for Instance %s in namespace %s: %w",

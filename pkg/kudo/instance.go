@@ -29,7 +29,7 @@ func GetInstance(client client.Client, name string, namespace string) (Instance,
 	instance, err := client.Kudo.
 		KudoV1beta1().
 		Instances(namespace).
-		Get(name, options)
+		Get(context.TODO(), name, options)
 	if err != nil {
 		return Instance{}, fmt.Errorf("failed to get Instance %s in namespace %s: %w", name, namespace, err)
 	}
@@ -47,7 +47,7 @@ func ListInstances(client client.Client, namespace string) ([]Instance, error) {
 	instanceList, err := client.Kudo.
 		KudoV1beta1().
 		Instances(namespace).
-		List(options)
+		List(context.TODO(), options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Instances in namespace %s: %w", namespace, err)
 	}
@@ -223,7 +223,7 @@ func (instance *Instance) Update() error {
 	update, err := instance.client.Kudo.
 		KudoV1beta1().
 		Instances(instance.Namespace).
-		Get(instance.Name, options)
+		Get(context.TODO(), instance.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update Instance %s in namespace %s: %w", instance.Name, instance.Namespace, err)
 	}
@@ -254,7 +254,7 @@ func (instance *Instance) UpdateParameters(parameters map[string]string) error {
 	updated, err := instance.client.Kudo.
 		KudoV1beta1().
 		Instances(instance.Namespace).
-		Update(&current)
+		Update(context.TODO(), &current, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf(
 			"failed to update parameters of Instance %s in namespace %s: %w",
