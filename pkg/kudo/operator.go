@@ -169,7 +169,14 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 		installOpts.Wait = &waitDuration
 	}
 
-	err = install.Package(kudoClient, builder.Instance, builder.Namespace, *pkg.Resources, builder.Parameters, r, installOpts)
+	err = install.Package(
+		kudoClient,
+		builder.Instance,
+		builder.Namespace,
+		*pkg.Resources,
+		builder.Parameters,
+		r, installOpts)
+
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to install operator %s: %w", builder.Name, err)
 	}
