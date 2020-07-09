@@ -3,6 +3,7 @@ package kudo
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/install"
@@ -291,7 +292,7 @@ func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, tim
 
 	w, err := watcherInterface.Watch(context.TODO(), listOptions)
 	if err != nil {
-		return fmt.Errorf("starting watch with %#v failed: %v", listOptions, err)
+		return fmt.Errorf("starting watch of %s/%s with %#v failed: %v", objectMeta.Namespace, objectMeta.Name, listOptions, err)
 	}
 
 	defer w.Stop()
@@ -302,6 +303,7 @@ func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, tim
 			return fmt.Errorf("converting object event %#v to unstructured failed: %v", event.Object, err)
 		}
 
+		log.Printf("Received event for %s/%s => %+v", objectMeta.Namespace, objectMeta.Name, event)
 		if event.Type != watch.Deleted {
 			continue
 		}
@@ -311,7 +313,7 @@ func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, tim
 		}
 	}
 
-	return fmt.Errorf("timed out waiting for deletion after %d seconds", timeoutSeconds)
+	return fmt.Errorf("timed out waiting for deletion of %s/%s after %d seconds", objectMeta.Namespace, objectMeta.Name, timeoutSeconds)
 }
 
 // UpgradeBuilder tracks the options set for an upgrade.
