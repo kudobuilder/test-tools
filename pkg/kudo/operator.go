@@ -205,6 +205,8 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	}
 
 	options := metav1.DeleteOptions{}
+	kudoClient := operator.client.Kudo.KudoV1beta1()
+	timeoutSec := timeout.Round(time.Second).Milliseconds() / 1000
 
 	if timeout != 0 {
 		propagationPolicy := metav1.DeletePropagationForeground
@@ -222,6 +224,13 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 			operator.Instance.Namespace,
 			err)
 	}
+	if timeout != 0 {
+		i := operator.Instance
+		err := waitForDeletion(kudoClient.Instances(i.Namespace), i.ObjectMeta, timeoutSec)
+		if err != nil {
+			return err
+		}
+	}
 
 	err = operator.client.Kudo.
 		KudoV1beta1().
@@ -233,6 +242,13 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 			operator.OperatorVersion.Name,
 			operator.OperatorVersion.Namespace,
 			err)
+	}
+	if timeout != 0 {
+		ov := operator.OperatorVersion
+		err = waitForDeletion(kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, timeoutSec)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = operator.client.Kudo.
@@ -246,31 +262,9 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 			operator.Operator.Namespace,
 			err)
 	}
-
 	if timeout != 0 {
-		kudoClient := operator.client.Kudo.KudoV1beta1()
-		i := operator.Instance
-		ov := operator.OperatorVersion
 		o := operator.Operator
-		instanceTimeoutSec := timeout.Round(time.Second).Milliseconds() / 1000
-
-		const (
-			// after the instance is gone, these should in theory disappear quickly, since nothing should refer to them
-			operatorVersionTimeoutSec = 10
-			operatorTimeoutSec        = 10
-		)
-
-		err := waitForDeletion(kudoClient.Instances(i.Namespace), i.ObjectMeta, instanceTimeoutSec)
-		if err != nil {
-			return err
-		}
-
-		err = waitForDeletion(kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, operatorVersionTimeoutSec)
-		if err != nil {
-			return err
-		}
-
-		err = waitForDeletion(kudoClient.Operators(o.Namespace), o.ObjectMeta, operatorTimeoutSec)
+		err = waitForDeletion(kudoClient.Operators(o.Namespace), o.ObjectMeta, timeoutSec)
 		if err != nil {
 			return err
 		}
