@@ -225,8 +225,10 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 			operator.Instance.Namespace,
 			err)
 	}
+
 	if timeout != 0 {
 		i := operator.Instance
+
 		err := waitForDeletion(kudoClient.Instances(i.Namespace), i.ObjectMeta, timeoutSec)
 		if err != nil {
 			return err
@@ -244,8 +246,10 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 			operator.OperatorVersion.Namespace,
 			err)
 	}
+
 	if timeout != 0 {
 		ov := operator.OperatorVersion
+
 		err = waitForDeletion(kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, timeoutSec)
 		if err != nil {
 			return err
@@ -263,8 +267,10 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 			operator.Operator.Namespace,
 			err)
 	}
+
 	if timeout != 0 {
 		o := operator.Operator
+
 		err = waitForDeletion(kudoClient.Operators(o.Namespace), o.ObjectMeta, timeoutSec)
 		if err != nil {
 			return err
@@ -287,7 +293,11 @@ func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, tim
 
 	w, err := watcherInterface.Watch(context.TODO(), listOptions)
 	if err != nil {
-		return fmt.Errorf("starting watch of %s/%s with %#v failed: %v", objectMeta.Namespace, objectMeta.Name, listOptions, err)
+		return fmt.Errorf("starting watch of %s/%s with %#v failed: %v",
+			objectMeta.Namespace,
+			objectMeta.Name,
+			listOptions,
+			err)
 	}
 
 	defer w.Stop()
@@ -307,7 +317,10 @@ func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, tim
 		}
 	}
 
-	return fmt.Errorf("timed out waiting for deletion of %s/%s after %d seconds", objectMeta.Namespace, objectMeta.Name, timeoutSeconds)
+	return fmt.Errorf("timed out waiting for deletion of %s/%s after %d seconds",
+		objectMeta.Namespace,
+		objectMeta.Name,
+		timeoutSeconds)
 }
 
 // UpgradeBuilder tracks the options set for an upgrade.
