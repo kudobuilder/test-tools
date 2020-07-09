@@ -3,7 +3,6 @@ package kudo
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/install"
@@ -195,7 +194,9 @@ func (operator Operator) Uninstall() error {
 
 // UninstallWaitForDeletion is the same as Uninstall but
 // initiates a foreground deletion, and waits for the KUDO resources to disappear.
-// Waits up to timeout for the instance to be deleted, and up to 10 seconds for each of OperatorVersion and Operator.
+// Waits up to timeout for the instance, operatorversion and operator to be deleted.
+// Delete and Wait for I, OV and O has to be done in order as otherwise the OV may end up
+// deleted before the Instance is deleted.
 //
 // Note that in the past some issues which were not fully understood were observed when using foreground deletion on
 // Instances, see https://github.com/kudobuilder/kudo/issues/1071
@@ -297,7 +298,6 @@ func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, tim
 			return fmt.Errorf("converting object event %#v to unstructured failed: %v", event.Object, err)
 		}
 
-		log.Printf("Received event for %s/%s => %+v", objectMeta.Namespace, objectMeta.Name, event)
 		if event.Type != watch.Deleted {
 			continue
 		}
