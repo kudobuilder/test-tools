@@ -284,7 +284,11 @@ type watcher interface {
 	Watch(ctx context.Context, ops metav1.ListOptions) (watch.Interface, error)
 }
 
-func waitForDeletion(ctx context.Context, watcherInterface watcher, objectMeta metav1.ObjectMeta, timeoutSeconds int64) error {
+func waitForDeletion(
+	ctx context.Context,
+	watcherInterface watcher,
+	objectMeta metav1.ObjectMeta,
+	timeoutSeconds int64) error {
 	listOptions := metav1.ListOptions{
 		ResourceVersion: objectMeta.ResourceVersion,
 		LabelSelector:   labels.SelectorFromSet(objectMeta.Labels).String(),
