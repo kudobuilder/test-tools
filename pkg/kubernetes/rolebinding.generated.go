@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // RoleBinding wraps a Kubernetes RoleBinding.
 type RoleBinding struct {
 	rbacv1.RoleBinding
@@ -24,14 +23,14 @@ func NewRoleBinding(client client.Client, rolebinding rbacv1.RoleBinding) (RoleB
 	createdRoleBinding, err := client.Kubernetes.
 		RbacV1().
 		RoleBindings(rolebinding.Namespace).
-		Create(&rolebinding)
+		Create(client.Ctx, &rolebinding, metav1.CreateOptions{})
 	if err != nil {
 		return RoleBinding{}, fmt.Errorf("failed to create rolebinding %s in namespace %s: %w", rolebinding.Name, rolebinding.Namespace, err)
 	}
 
 	return RoleBinding{
 		RoleBinding: *createdRoleBinding,
-		client: client,
+		client:      client,
 	}, nil
 }
 
@@ -42,14 +41,14 @@ func GetRoleBinding(client client.Client, name string, namespace string) (RoleBi
 	rolebinding, err := client.Kubernetes.
 		RbacV1().
 		RoleBindings(namespace).
-		Get(name, options)
+		Get(client.Ctx, name, options)
 	if err != nil {
 		return RoleBinding{}, fmt.Errorf("failed to get rolebinding %s in namespace %s: %w", name, namespace, err)
 	}
 
 	return RoleBinding{
 		RoleBinding: *rolebinding,
-		client: client,
+		client:      client,
 	}, nil
 }
 
@@ -60,7 +59,7 @@ func ListRoleBindings(client client.Client, namespace string) ([]RoleBinding, er
 	list, err := client.Kubernetes.
 		RbacV1().
 		RoleBindings(namespace).
-		List(options)
+		List(client.Ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list rolebindings in namespace %s: %w", namespace, err)
 	}
@@ -70,7 +69,7 @@ func ListRoleBindings(client client.Client, namespace string) ([]RoleBinding, er
 	for _, item := range list.Items {
 		rolebindings = append(rolebindings, RoleBinding{
 			RoleBinding: item,
-			client: client,
+			client:      client,
 		})
 	}
 
@@ -84,7 +83,7 @@ func (rolebinding RoleBinding) Delete() error {
 	err := rolebinding.client.Kubernetes.
 		RbacV1().
 		RoleBindings(rolebinding.Namespace).
-		Delete(rolebinding.Name, &options)
+		Delete(rolebinding.client.Ctx, rolebinding.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to delete rolebinding %s in namespace %s: %w", rolebinding.Name, rolebinding.Namespace, err)
 	}
@@ -99,7 +98,7 @@ func (rolebinding *RoleBinding) Update() error {
 	update, err := rolebinding.client.Kubernetes.
 		RbacV1().
 		RoleBindings(rolebinding.Namespace).
-		Get(rolebinding.Name, options)
+		Get(rolebinding.client.Ctx, rolebinding.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update rolebinding %s in namespace %s: %w", rolebinding.Name, rolebinding.Namespace, err)
 	}
@@ -114,7 +113,7 @@ func (rolebinding *RoleBinding) Save() error {
 	update, err := rolebinding.client.Kubernetes.
 		RbacV1().
 		RoleBindings(rolebinding.Namespace).
-		Update(&rolebinding.RoleBinding)
+		Update(rolebinding.client.Ctx, &rolebinding.RoleBinding, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to save rolebinding %s in namespace %s: %w", rolebinding.Name, rolebinding.Namespace, err)
 	}

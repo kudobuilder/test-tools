@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // ServiceAccount wraps a Kubernetes ServiceAccount.
 type ServiceAccount struct {
 	corev1.ServiceAccount
@@ -24,14 +23,14 @@ func NewServiceAccount(client client.Client, serviceaccount corev1.ServiceAccoun
 	createdServiceAccount, err := client.Kubernetes.
 		CoreV1().
 		ServiceAccounts(serviceaccount.Namespace).
-		Create(&serviceaccount)
+		Create(client.Ctx, &serviceaccount, metav1.CreateOptions{})
 	if err != nil {
 		return ServiceAccount{}, fmt.Errorf("failed to create serviceaccount %s in namespace %s: %w", serviceaccount.Name, serviceaccount.Namespace, err)
 	}
 
 	return ServiceAccount{
 		ServiceAccount: *createdServiceAccount,
-		client: client,
+		client:         client,
 	}, nil
 }
 
@@ -42,14 +41,14 @@ func GetServiceAccount(client client.Client, name string, namespace string) (Ser
 	serviceaccount, err := client.Kubernetes.
 		CoreV1().
 		ServiceAccounts(namespace).
-		Get(name, options)
+		Get(client.Ctx, name, options)
 	if err != nil {
 		return ServiceAccount{}, fmt.Errorf("failed to get serviceaccount %s in namespace %s: %w", name, namespace, err)
 	}
 
 	return ServiceAccount{
 		ServiceAccount: *serviceaccount,
-		client: client,
+		client:         client,
 	}, nil
 }
 
@@ -60,7 +59,7 @@ func ListServiceAccounts(client client.Client, namespace string) ([]ServiceAccou
 	list, err := client.Kubernetes.
 		CoreV1().
 		ServiceAccounts(namespace).
-		List(options)
+		List(client.Ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list serviceaccounts in namespace %s: %w", namespace, err)
 	}
@@ -70,7 +69,7 @@ func ListServiceAccounts(client client.Client, namespace string) ([]ServiceAccou
 	for _, item := range list.Items {
 		serviceaccounts = append(serviceaccounts, ServiceAccount{
 			ServiceAccount: item,
-			client: client,
+			client:         client,
 		})
 	}
 
@@ -84,7 +83,7 @@ func (serviceaccount ServiceAccount) Delete() error {
 	err := serviceaccount.client.Kubernetes.
 		CoreV1().
 		ServiceAccounts(serviceaccount.Namespace).
-		Delete(serviceaccount.Name, &options)
+		Delete(serviceaccount.client.Ctx, serviceaccount.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to delete serviceaccount %s in namespace %s: %w", serviceaccount.Name, serviceaccount.Namespace, err)
 	}
@@ -99,7 +98,7 @@ func (serviceaccount *ServiceAccount) Update() error {
 	update, err := serviceaccount.client.Kubernetes.
 		CoreV1().
 		ServiceAccounts(serviceaccount.Namespace).
-		Get(serviceaccount.Name, options)
+		Get(serviceaccount.client.Ctx, serviceaccount.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update serviceaccount %s in namespace %s: %w", serviceaccount.Name, serviceaccount.Namespace, err)
 	}
@@ -114,7 +113,7 @@ func (serviceaccount *ServiceAccount) Save() error {
 	update, err := serviceaccount.client.Kubernetes.
 		CoreV1().
 		ServiceAccounts(serviceaccount.Namespace).
-		Update(&serviceaccount.ServiceAccount)
+		Update(serviceaccount.client.Ctx, &serviceaccount.ServiceAccount, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to save serviceaccount %s in namespace %s: %w", serviceaccount.Name, serviceaccount.Namespace, err)
 	}

@@ -1,9 +1,12 @@
 package kudo
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/install"
+	"github.com/kudobuilder/kudo/pkg/kudoctl/resources/upgrade"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -11,7 +14,6 @@ import (
 	"github.com/Masterminds/semver"
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
 	cmd_install "github.com/kudobuilder/kudo/pkg/kudoctl/cmd/install"
-	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/install"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/resolver"
 	kudooperator "github.com/kudobuilder/kudo/pkg/kudoctl/util/kudo"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/util/repo"
@@ -36,7 +38,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	i, err := client.Kudo.
 		KudoV1beta1().
 		Instances(namespace).
-		Get(instance, options)
+		Get(client.Ctx, instance, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to get Instance %s in namespace %s: %w", instance, namespace, err)
 	}
@@ -44,7 +46,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	ov, err := client.Kudo.
 		KudoV1beta1().
 		OperatorVersions(namespace).
-		Get(i.Spec.OperatorVersion.Name, options)
+		Get(client.Ctx, i.Spec.OperatorVersion.Name, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf(
 			"failed to get OperatorVersion %s in namespace %s: %w", i.Spec.OperatorVersion.Name, namespace, err)
@@ -53,7 +55,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	o, err := client.Kudo.
 		KudoV1beta1().
 		Operators(namespace).
-		Get(ov.Spec.Operator.Name, options)
+		Get(client.Ctx, ov.Spec.Operator.Name, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf(
 			"failed to get Operator %s in namespace %s: %w", ov.Spec.Operator.Name, namespace, err)
@@ -167,7 +169,14 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 		installOpts.Wait = &waitDuration
 	}
 
-	err = install.Package(kudoClient, builder.Instance, builder.Namespace, *pkg.Resources, builder.Parameters, installOpts)
+	err = install.Package(
+		kudoClient,
+		builder.Instance,
+		builder.Namespace,
+		*pkg.Resources,
+		builder.Parameters,
+		r, installOpts)
+
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to install operator %s: %w", builder.Name, err)
 	}
@@ -185,7 +194,9 @@ func (operator Operator) Uninstall() error {
 
 // UninstallWaitForDeletion is the same as Uninstall but
 // initiates a foreground deletion, and waits for the KUDO resources to disappear.
-// Waits up to timeout for the instance to be deleted, and up to 10 seconds for each of OperatorVersion and Operator.
+// Waits up to timeout for the instance, operatorversion and operator to be deleted.
+// Delete and Wait for I, OV and O has to be done in order as otherwise the OV may end up
+// deleted before the Instance is deleted.
 //
 // Note that in the past some issues which were not fully understood were observed when using foreground deletion on
 // Instances, see https://github.com/kudobuilder/kudo/issues/1071
@@ -195,6 +206,8 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	}
 
 	options := metav1.DeleteOptions{}
+	kudoClient := operator.client.Kudo.KudoV1beta1()
+	timeoutSec := timeout.Round(time.Second).Milliseconds() / 1000
 
 	if timeout != 0 {
 		propagationPolicy := metav1.DeletePropagationForeground
@@ -204,7 +217,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	err := operator.client.Kudo.
 		KudoV1beta1().
 		Instances(operator.Instance.Namespace).
-		Delete(operator.Instance.Name, &options)
+		Delete(operator.client.Ctx, operator.Instance.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete Instance %s in namespace %s: %w",
@@ -213,10 +226,19 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 			err)
 	}
 
+	if timeout != 0 {
+		i := operator.Instance
+
+		err := waitForDeletion(operator.client.Ctx, kudoClient.Instances(i.Namespace), i.ObjectMeta, timeoutSec)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = operator.client.Kudo.
 		KudoV1beta1().
 		OperatorVersions(operator.OperatorVersion.Namespace).
-		Delete(operator.OperatorVersion.Name, &options)
+		Delete(operator.client.Ctx, operator.OperatorVersion.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete OperatorVersion %s in namespace %s: %w",
@@ -225,10 +247,19 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 			err)
 	}
 
+	if timeout != 0 {
+		ov := operator.OperatorVersion
+
+		err = waitForDeletion(operator.client.Ctx, kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, timeoutSec)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = operator.client.Kudo.
 		KudoV1beta1().
 		Operators(operator.Operator.Namespace).
-		Delete(operator.Operator.Name, &options)
+		Delete(operator.client.Ctx, operator.Operator.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete Operator %s in namespace %s: %w",
@@ -238,29 +269,9 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	}
 
 	if timeout != 0 {
-		kudoClient := operator.client.Kudo.KudoV1beta1()
-		i := operator.Instance
-		ov := operator.OperatorVersion
 		o := operator.Operator
-		instanceTimeoutSec := timeout.Round(time.Second).Milliseconds() / 1000
 
-		const (
-			// after the instance is gone, these should in theory disappear quickly, since nothing should refer to them
-			operatorVersionTimeoutSec = 10
-			operatorTimeoutSec        = 10
-		)
-
-		err := waitForDeletion(kudoClient.Instances(i.Namespace), i.ObjectMeta, instanceTimeoutSec)
-		if err != nil {
-			return err
-		}
-
-		err = waitForDeletion(kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, operatorVersionTimeoutSec)
-		if err != nil {
-			return err
-		}
-
-		err = waitForDeletion(kudoClient.Operators(o.Namespace), o.ObjectMeta, operatorTimeoutSec)
+		err = waitForDeletion(operator.client.Ctx, kudoClient.Operators(o.Namespace), o.ObjectMeta, timeoutSec)
 		if err != nil {
 			return err
 		}
@@ -270,19 +281,27 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 }
 
 type watcher interface {
-	Watch(ops metav1.ListOptions) (watch.Interface, error)
+	Watch(ctx context.Context, ops metav1.ListOptions) (watch.Interface, error)
 }
 
-func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, timeoutSeconds int64) error {
+func waitForDeletion(
+	ctx context.Context,
+	watcherInterface watcher,
+	objectMeta metav1.ObjectMeta,
+	timeoutSeconds int64) error {
 	listOptions := metav1.ListOptions{
 		ResourceVersion: objectMeta.ResourceVersion,
 		LabelSelector:   labels.SelectorFromSet(objectMeta.Labels).String(),
 		TimeoutSeconds:  &timeoutSeconds,
 	}
 
-	w, err := watcherInterface.Watch(listOptions)
+	w, err := watcherInterface.Watch(ctx, listOptions)
 	if err != nil {
-		return fmt.Errorf("starting watch with %#v failed: %v", listOptions, err)
+		return fmt.Errorf("starting watch of %s/%s with %#v failed: %v",
+			objectMeta.Namespace,
+			objectMeta.Name,
+			listOptions,
+			err)
 	}
 
 	defer w.Stop()
@@ -302,7 +321,10 @@ func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, tim
 		}
 	}
 
-	return fmt.Errorf("timed out waiting for deletion after %d seconds", timeoutSeconds)
+	return fmt.Errorf("timed out waiting for deletion of %s/%s after %d seconds",
+		objectMeta.Namespace,
+		objectMeta.Name,
+		timeoutSeconds)
 }
 
 // UpgradeBuilder tracks the options set for an upgrade.
@@ -372,12 +394,13 @@ func (builder UpgradeBuilder) Do(operator *Operator) error {
 
 	kudoClient := kudooperator.NewClientFromK8s(operator.client.Kudo, operator.client.Kubernetes)
 
-	err = kudooperator.UpgradeOperatorVersion(
+	err = upgrade.OperatorVersion(
 		kudoClient,
 		pkg.Resources.OperatorVersion,
 		operator.Instance.Name,
-		operator.Instance.Namespace,
-		builder.Parameters)
+		builder.Parameters,
+		resolver.New(repository))
+
 	if err != nil {
 		return fmt.Errorf(
 			"failed to upgrade OperatorVersion for Instance %s in namespace %s: %w",

@@ -2,6 +2,8 @@
 package client
 
 import (
+	"context"
+
 	kudo "github.com/kudobuilder/kudo/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -10,6 +12,7 @@ import (
 
 // Client wraps Kubernetes and KUDO APIs.
 type Client struct {
+	Ctx        context.Context
 	Kubernetes kubernetes.Interface
 	Kudo       kudo.Interface
 	Config     rest.Config
@@ -35,6 +38,7 @@ func NewForConfig(kubeconfigPath string) (Client, error) {
 	}
 
 	return Client{
+		Ctx:            context.TODO(),
 		Kubernetes:     kubernetesClient,
 		Kudo:           kudoClient,
 		Config:         *config,
@@ -60,6 +64,7 @@ func NewInCluster() (Client, error) {
 	}
 
 	return Client{
+		Ctx:        context.TODO(),
 		Kubernetes: kubernetesClient,
 		Kudo:       kudoClient,
 		Config:     *config,

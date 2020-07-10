@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,7 @@ func TestPod(t *testing.T) {
 	}
 
 	client := client.Client{
+		Ctx:        context.TODO(),
 		Kubernetes: fake.NewSimpleClientset(testPod.DeepCopyObject()),
 	}
 

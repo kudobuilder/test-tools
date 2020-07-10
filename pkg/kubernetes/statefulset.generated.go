@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // StatefulSet wraps a Kubernetes StatefulSet.
 type StatefulSet struct {
 	appsv1.StatefulSet
@@ -24,14 +23,14 @@ func NewStatefulSet(client client.Client, statefulset appsv1.StatefulSet) (State
 	createdStatefulSet, err := client.Kubernetes.
 		AppsV1().
 		StatefulSets(statefulset.Namespace).
-		Create(&statefulset)
+		Create(client.Ctx, &statefulset, metav1.CreateOptions{})
 	if err != nil {
 		return StatefulSet{}, fmt.Errorf("failed to create statefulset %s in namespace %s: %w", statefulset.Name, statefulset.Namespace, err)
 	}
 
 	return StatefulSet{
 		StatefulSet: *createdStatefulSet,
-		client: client,
+		client:      client,
 	}, nil
 }
 
@@ -42,14 +41,14 @@ func GetStatefulSet(client client.Client, name string, namespace string) (Statef
 	statefulset, err := client.Kubernetes.
 		AppsV1().
 		StatefulSets(namespace).
-		Get(name, options)
+		Get(client.Ctx, name, options)
 	if err != nil {
 		return StatefulSet{}, fmt.Errorf("failed to get statefulset %s in namespace %s: %w", name, namespace, err)
 	}
 
 	return StatefulSet{
 		StatefulSet: *statefulset,
-		client: client,
+		client:      client,
 	}, nil
 }
 
@@ -60,7 +59,7 @@ func ListStatefulSets(client client.Client, namespace string) ([]StatefulSet, er
 	list, err := client.Kubernetes.
 		AppsV1().
 		StatefulSets(namespace).
-		List(options)
+		List(client.Ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list statefulsets in namespace %s: %w", namespace, err)
 	}
@@ -70,7 +69,7 @@ func ListStatefulSets(client client.Client, namespace string) ([]StatefulSet, er
 	for _, item := range list.Items {
 		statefulsets = append(statefulsets, StatefulSet{
 			StatefulSet: item,
-			client: client,
+			client:      client,
 		})
 	}
 
@@ -84,7 +83,7 @@ func (statefulset StatefulSet) Delete() error {
 	err := statefulset.client.Kubernetes.
 		AppsV1().
 		StatefulSets(statefulset.Namespace).
-		Delete(statefulset.Name, &options)
+		Delete(statefulset.client.Ctx, statefulset.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to delete statefulset %s in namespace %s: %w", statefulset.Name, statefulset.Namespace, err)
 	}
@@ -99,7 +98,7 @@ func (statefulset *StatefulSet) Update() error {
 	update, err := statefulset.client.Kubernetes.
 		AppsV1().
 		StatefulSets(statefulset.Namespace).
-		Get(statefulset.Name, options)
+		Get(statefulset.client.Ctx, statefulset.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update statefulset %s in namespace %s: %w", statefulset.Name, statefulset.Namespace, err)
 	}
@@ -114,7 +113,7 @@ func (statefulset *StatefulSet) Save() error {
 	update, err := statefulset.client.Kubernetes.
 		AppsV1().
 		StatefulSets(statefulset.Namespace).
-		Update(&statefulset.StatefulSet)
+		Update(statefulset.client.Ctx, &statefulset.StatefulSet, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to save statefulset %s in namespace %s: %w", statefulset.Name, statefulset.Namespace, err)
 	}

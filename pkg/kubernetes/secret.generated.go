@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // Secret wraps a Kubernetes Secret.
 type Secret struct {
 	corev1.Secret
@@ -24,7 +23,7 @@ func NewSecret(client client.Client, secret corev1.Secret) (Secret, error) {
 	createdSecret, err := client.Kubernetes.
 		CoreV1().
 		Secrets(secret.Namespace).
-		Create(&secret)
+		Create(client.Ctx, &secret, metav1.CreateOptions{})
 	if err != nil {
 		return Secret{}, fmt.Errorf("failed to create secret %s in namespace %s: %w", secret.Name, secret.Namespace, err)
 	}
@@ -42,7 +41,7 @@ func GetSecret(client client.Client, name string, namespace string) (Secret, err
 	secret, err := client.Kubernetes.
 		CoreV1().
 		Secrets(namespace).
-		Get(name, options)
+		Get(client.Ctx, name, options)
 	if err != nil {
 		return Secret{}, fmt.Errorf("failed to get secret %s in namespace %s: %w", name, namespace, err)
 	}
@@ -60,7 +59,7 @@ func ListSecrets(client client.Client, namespace string) ([]Secret, error) {
 	list, err := client.Kubernetes.
 		CoreV1().
 		Secrets(namespace).
-		List(options)
+		List(client.Ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list secrets in namespace %s: %w", namespace, err)
 	}
@@ -84,7 +83,7 @@ func (secret Secret) Delete() error {
 	err := secret.client.Kubernetes.
 		CoreV1().
 		Secrets(secret.Namespace).
-		Delete(secret.Name, &options)
+		Delete(secret.client.Ctx, secret.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to delete secret %s in namespace %s: %w", secret.Name, secret.Namespace, err)
 	}
@@ -99,7 +98,7 @@ func (secret *Secret) Update() error {
 	update, err := secret.client.Kubernetes.
 		CoreV1().
 		Secrets(secret.Namespace).
-		Get(secret.Name, options)
+		Get(secret.client.Ctx, secret.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update secret %s in namespace %s: %w", secret.Name, secret.Namespace, err)
 	}
@@ -114,7 +113,7 @@ func (secret *Secret) Save() error {
 	update, err := secret.client.Kubernetes.
 		CoreV1().
 		Secrets(secret.Namespace).
-		Update(&secret.Secret)
+		Update(secret.client.Ctx, &secret.Secret, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to save secret %s in namespace %s: %w", secret.Name, secret.Namespace, err)
 	}

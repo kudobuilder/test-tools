@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // Node wraps a Kubernetes Node.
 type Node struct {
 	corev1.Node
@@ -24,13 +23,13 @@ func NewNode(client client.Client, node corev1.Node) (Node, error) {
 	createdNode, err := client.Kubernetes.
 		CoreV1().
 		Nodes().
-		Create(&node)
+		Create(client.Ctx, &node, metav1.CreateOptions{})
 	if err != nil {
 		return Node{}, fmt.Errorf("failed to create node %s: %w", node.Name, err)
 	}
 
 	return Node{
-		Node: *createdNode,
+		Node:   *createdNode,
 		client: client,
 	}, nil
 }
@@ -42,13 +41,13 @@ func GetNode(client client.Client, name string) (Node, error) {
 	node, err := client.Kubernetes.
 		CoreV1().
 		Nodes().
-		Get(name, options)
+		Get(client.Ctx, name, options)
 	if err != nil {
 		return Node{}, fmt.Errorf("failed to get node %s: %w", name, err)
 	}
 
 	return Node{
-		Node: *node,
+		Node:   *node,
 		client: client,
 	}, nil
 }
@@ -60,7 +59,7 @@ func ListNodes(client client.Client) ([]Node, error) {
 	list, err := client.Kubernetes.
 		CoreV1().
 		Nodes().
-		List(options)
+		List(client.Ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %w", err)
 	}
@@ -69,7 +68,7 @@ func ListNodes(client client.Client) ([]Node, error) {
 
 	for _, item := range list.Items {
 		nodes = append(nodes, Node{
-			Node: item,
+			Node:   item,
 			client: client,
 		})
 	}
@@ -84,7 +83,7 @@ func (node Node) Delete() error {
 	err := node.client.Kubernetes.
 		CoreV1().
 		Nodes().
-		Delete(node.Name, &options)
+		Delete(node.client.Ctx, node.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to delete node %s: %w", node.Name, err)
 	}
@@ -99,7 +98,7 @@ func (node *Node) Update() error {
 	update, err := node.client.Kubernetes.
 		CoreV1().
 		Nodes().
-		Get(node.Name, options)
+		Get(node.client.Ctx, node.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update node %s: %w", node.Name, err)
 	}
@@ -114,7 +113,7 @@ func (node *Node) Save() error {
 	update, err := node.client.Kubernetes.
 		CoreV1().
 		Nodes().
-		Update(&node.Node)
+		Update(node.client.Ctx, &node.Node, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to save node %s: %w", node.Name, err)
 	}

@@ -1,6 +1,7 @@
 package tls
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +13,7 @@ import (
 
 func TestCertSecret(t *testing.T) {
 	client := client.Client{
+		Ctx:        context.TODO(),
 		Kubernetes: fake.NewSimpleClientset(),
 	}
 

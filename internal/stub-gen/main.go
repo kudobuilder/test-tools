@@ -37,7 +37,7 @@ func New{{ .Type }}(client client.Client, {{ .Type | toLower }} {{ .API | toLowe
 	created{{ .Type }}, err := client.Kubernetes.
 		{{ .API }}().
 		{{ .Type }}s({{ if .HasNamespace }}{{ .Type | toLower }}.Namespace{{end}}).
-		Create(&{{ .Type | toLower }})
+		Create(client.Ctx, &{{ .Type | toLower }}, metav1.CreateOptions{})
 	if err != nil {
 		return {{ .Type }}{}, fmt.Errorf("failed to create {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ .Type | toLower }}.Name{{ if .HasNamespace }}, {{ .Type | toLower}}.Namespace{{ end }}, err)
 	}
@@ -55,7 +55,7 @@ func Get{{ .Type }}(client client.Client, name string{{ if .HasNamespace }}, nam
 	{{ .Type | toLower }}, err := client.Kubernetes.
 		{{ .API }}().
 		{{ .Type }}s({{ if .HasNamespace }}namespace{{ end }}).
-		Get(name, options)
+		Get(client.Ctx, name, options)
 	if err != nil {
 		return {{ .Type }}{}, fmt.Errorf("failed to get {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", name{{ if .HasNamespace }}, namespace{{ end }}, err)
 	}
@@ -73,7 +73,7 @@ func List{{.Type}}s(client client.Client{{ if .HasNamespace }}, namespace string
 	list, err := client.Kubernetes.
 		{{ .API }}().
 		{{ .Type }}s({{ if .HasNamespace }}namespace{{ end }}).
-		List(options)
+		List(client.Ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list {{ .Type | toLower }}s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ if .HasNamespace }}namespace, {{ end }}err)
 	}
@@ -97,7 +97,7 @@ func ({{ .Type | toLower }} {{ .Type }}) Delete() error {
 	err := {{ .Type | toLower }}.client.Kubernetes.
 		{{ .API }}().
 		{{ .Type }}s({{ if .HasNamespace }}{{ .Type | toLower }}.Namespace{{ end }}).
-		Delete({{ .Type | toLower }}.Name, &options)
+		Delete({{ .Type | toLower}}.client.Ctx, {{ .Type | toLower }}.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to delete {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ .Type | toLower }}.Name, {{ if .HasNamespace }}{{ .Type | toLower}}.Namespace, {{ end }}err)
 	}
@@ -112,7 +112,7 @@ func ({{ .Type | toLower }} *{{ .Type }}) Update() error {
 	update, err := {{ .Type | toLower }}.client.Kubernetes.
 		{{ .API }}().
 		{{ .Type }}s({{ if .HasNamespace }}{{ .Type | toLower }}.Namespace{{ end }}).
-		Get({{ .Type | toLower }}.Name, options)
+		Get({{ .Type | toLower}}.client.Ctx, {{ .Type | toLower }}.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ .Type | toLower }}.Name, {{ if .HasNamespace }}{{ .Type | toLower}}.Namespace, {{ end }}err)
 	}
@@ -127,7 +127,7 @@ func ({{ .Type | toLower }} *{{ .Type }}) Save() error {
 	update, err := {{ .Type | toLower }}.client.Kubernetes.
 		{{ .API }}().
 		{{ .Type }}s({{ if .HasNamespace }}{{ .Type | toLower }}.Namespace{{ end }}).
-		Update(&{{ .Type | toLower }}.{{ .Type }})
+		Update({{ .Type | toLower}}.client.Ctx, &{{ .Type | toLower }}.{{ .Type }}, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to save {{ .Type | toLower }} %s{{ if .HasNamespace }} in namespace %s{{ end }}: %w", {{ .Type | toLower }}.Name, {{ if .HasNamespace }}{{ .Type | toLower}}.Namespace, {{ end }}err)
 	}

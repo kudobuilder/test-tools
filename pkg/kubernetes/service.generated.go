@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // Service wraps a Kubernetes Service.
 type Service struct {
 	corev1.Service
@@ -24,14 +23,14 @@ func NewService(client client.Client, service corev1.Service) (Service, error) {
 	createdService, err := client.Kubernetes.
 		CoreV1().
 		Services(service.Namespace).
-		Create(&service)
+		Create(client.Ctx, &service, metav1.CreateOptions{})
 	if err != nil {
 		return Service{}, fmt.Errorf("failed to create service %s in namespace %s: %w", service.Name, service.Namespace, err)
 	}
 
 	return Service{
 		Service: *createdService,
-		client: client,
+		client:  client,
 	}, nil
 }
 
@@ -42,14 +41,14 @@ func GetService(client client.Client, name string, namespace string) (Service, e
 	service, err := client.Kubernetes.
 		CoreV1().
 		Services(namespace).
-		Get(name, options)
+		Get(client.Ctx, name, options)
 	if err != nil {
 		return Service{}, fmt.Errorf("failed to get service %s in namespace %s: %w", name, namespace, err)
 	}
 
 	return Service{
 		Service: *service,
-		client: client,
+		client:  client,
 	}, nil
 }
 
@@ -60,7 +59,7 @@ func ListServices(client client.Client, namespace string) ([]Service, error) {
 	list, err := client.Kubernetes.
 		CoreV1().
 		Services(namespace).
-		List(options)
+		List(client.Ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list services in namespace %s: %w", namespace, err)
 	}
@@ -70,7 +69,7 @@ func ListServices(client client.Client, namespace string) ([]Service, error) {
 	for _, item := range list.Items {
 		services = append(services, Service{
 			Service: item,
-			client: client,
+			client:  client,
 		})
 	}
 
@@ -84,7 +83,7 @@ func (service Service) Delete() error {
 	err := service.client.Kubernetes.
 		CoreV1().
 		Services(service.Namespace).
-		Delete(service.Name, &options)
+		Delete(service.client.Ctx, service.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to delete service %s in namespace %s: %w", service.Name, service.Namespace, err)
 	}
@@ -99,7 +98,7 @@ func (service *Service) Update() error {
 	update, err := service.client.Kubernetes.
 		CoreV1().
 		Services(service.Namespace).
-		Get(service.Name, options)
+		Get(service.client.Ctx, service.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update service %s in namespace %s: %w", service.Name, service.Namespace, err)
 	}
@@ -114,7 +113,7 @@ func (service *Service) Save() error {
 	update, err := service.client.Kubernetes.
 		CoreV1().
 		Services(service.Namespace).
-		Update(&service.Service)
+		Update(service.client.Ctx, &service.Service, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to save service %s in namespace %s: %w", service.Name, service.Namespace, err)
 	}

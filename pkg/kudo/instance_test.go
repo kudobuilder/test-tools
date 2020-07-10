@@ -1,6 +1,7 @@
 package kudo
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ func TestInstances(t *testing.T) {
 	}
 
 	client := client.Client{
+		Ctx:  context.TODO(),
 		Kudo: fake.NewSimpleClientset(testInstance.DeepCopyObject()),
 	}
 
@@ -49,6 +51,7 @@ func TestWaitTimeout(t *testing.T) {
 	}
 
 	client := client.Client{
+		Ctx:  context.TODO(),
 		Kudo: fake.NewSimpleClientset(testInstance.DeepCopyObject()),
 	}
 

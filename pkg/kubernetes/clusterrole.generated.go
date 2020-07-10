@@ -11,7 +11,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // ClusterRole wraps a Kubernetes ClusterRole.
 type ClusterRole struct {
 	rbacv1.ClusterRole
@@ -24,14 +23,14 @@ func NewClusterRole(client client.Client, clusterrole rbacv1.ClusterRole) (Clust
 	createdClusterRole, err := client.Kubernetes.
 		RbacV1().
 		ClusterRoles().
-		Create(&clusterrole)
+		Create(client.Ctx, &clusterrole, metav1.CreateOptions{})
 	if err != nil {
 		return ClusterRole{}, fmt.Errorf("failed to create clusterrole %s: %w", clusterrole.Name, err)
 	}
 
 	return ClusterRole{
 		ClusterRole: *createdClusterRole,
-		client: client,
+		client:      client,
 	}, nil
 }
 
@@ -42,14 +41,14 @@ func GetClusterRole(client client.Client, name string) (ClusterRole, error) {
 	clusterrole, err := client.Kubernetes.
 		RbacV1().
 		ClusterRoles().
-		Get(name, options)
+		Get(client.Ctx, name, options)
 	if err != nil {
 		return ClusterRole{}, fmt.Errorf("failed to get clusterrole %s: %w", name, err)
 	}
 
 	return ClusterRole{
 		ClusterRole: *clusterrole,
-		client: client,
+		client:      client,
 	}, nil
 }
 
@@ -60,7 +59,7 @@ func ListClusterRoles(client client.Client) ([]ClusterRole, error) {
 	list, err := client.Kubernetes.
 		RbacV1().
 		ClusterRoles().
-		List(options)
+		List(client.Ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list clusterroles: %w", err)
 	}
@@ -70,7 +69,7 @@ func ListClusterRoles(client client.Client) ([]ClusterRole, error) {
 	for _, item := range list.Items {
 		clusterroles = append(clusterroles, ClusterRole{
 			ClusterRole: item,
-			client: client,
+			client:      client,
 		})
 	}
 
@@ -84,7 +83,7 @@ func (clusterrole ClusterRole) Delete() error {
 	err := clusterrole.client.Kubernetes.
 		RbacV1().
 		ClusterRoles().
-		Delete(clusterrole.Name, &options)
+		Delete(clusterrole.client.Ctx, clusterrole.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to delete clusterrole %s: %w", clusterrole.Name, err)
 	}
@@ -99,7 +98,7 @@ func (clusterrole *ClusterRole) Update() error {
 	update, err := clusterrole.client.Kubernetes.
 		RbacV1().
 		ClusterRoles().
-		Get(clusterrole.Name, options)
+		Get(clusterrole.client.Ctx, clusterrole.Name, options)
 	if err != nil {
 		return fmt.Errorf("failed to update clusterrole %s: %w", clusterrole.Name, err)
 	}
@@ -114,7 +113,7 @@ func (clusterrole *ClusterRole) Save() error {
 	update, err := clusterrole.client.Kubernetes.
 		RbacV1().
 		ClusterRoles().
-		Update(&clusterrole.ClusterRole)
+		Update(clusterrole.client.Ctx, &clusterrole.ClusterRole, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to save clusterrole %s: %w", clusterrole.Name, err)
 	}
