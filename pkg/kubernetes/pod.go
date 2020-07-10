@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +22,7 @@ func (pod Pod) ContainerLogs(container string) ([]byte, error) {
 		CoreV1().
 		Pods(pod.Namespace).
 		GetLogs(pod.Name, &options).
-		Do(context.TODO())
+		Do(pod.client.Ctx)
 
 	if result.Error() != nil {
 		return []byte{}, fmt.Errorf("failed to get logs of container %s: %w", container, result.Error())

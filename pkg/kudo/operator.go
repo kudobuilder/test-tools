@@ -38,7 +38,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	i, err := client.Kudo.
 		KudoV1beta1().
 		Instances(namespace).
-		Get(context.TODO(), instance, options)
+		Get(client.Ctx, instance, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to get Instance %s in namespace %s: %w", instance, namespace, err)
 	}
@@ -46,7 +46,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	ov, err := client.Kudo.
 		KudoV1beta1().
 		OperatorVersions(namespace).
-		Get(context.TODO(), i.Spec.OperatorVersion.Name, options)
+		Get(client.Ctx, i.Spec.OperatorVersion.Name, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf(
 			"failed to get OperatorVersion %s in namespace %s: %w", i.Spec.OperatorVersion.Name, namespace, err)
@@ -55,7 +55,7 @@ func newOperator(client client.Client, name string, instance string, namespace s
 	o, err := client.Kudo.
 		KudoV1beta1().
 		Operators(namespace).
-		Get(context.TODO(), ov.Spec.Operator.Name, options)
+		Get(client.Ctx, ov.Spec.Operator.Name, options)
 	if err != nil {
 		return Operator{}, fmt.Errorf(
 			"failed to get Operator %s in namespace %s: %w", ov.Spec.Operator.Name, namespace, err)
@@ -217,7 +217,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	err := operator.client.Kudo.
 		KudoV1beta1().
 		Instances(operator.Instance.Namespace).
-		Delete(context.TODO(), operator.Instance.Name, options)
+		Delete(operator.client.Ctx, operator.Instance.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete Instance %s in namespace %s: %w",
@@ -229,7 +229,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	if timeout != 0 {
 		i := operator.Instance
 
-		err := waitForDeletion(kudoClient.Instances(i.Namespace), i.ObjectMeta, timeoutSec)
+		err := waitForDeletion(operator.client.Ctx, kudoClient.Instances(i.Namespace), i.ObjectMeta, timeoutSec)
 		if err != nil {
 			return err
 		}
@@ -238,7 +238,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	err = operator.client.Kudo.
 		KudoV1beta1().
 		OperatorVersions(operator.OperatorVersion.Namespace).
-		Delete(context.TODO(), operator.OperatorVersion.Name, options)
+		Delete(operator.client.Ctx, operator.OperatorVersion.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete OperatorVersion %s in namespace %s: %w",
@@ -250,7 +250,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	if timeout != 0 {
 		ov := operator.OperatorVersion
 
-		err = waitForDeletion(kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, timeoutSec)
+		err = waitForDeletion(operator.client.Ctx, kudoClient.OperatorVersions(ov.Namespace), ov.ObjectMeta, timeoutSec)
 		if err != nil {
 			return err
 		}
@@ -259,7 +259,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	err = operator.client.Kudo.
 		KudoV1beta1().
 		Operators(operator.Operator.Namespace).
-		Delete(context.TODO(), operator.Operator.Name, options)
+		Delete(operator.client.Ctx, operator.Operator.Name, options)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete Operator %s in namespace %s: %w",
@@ -271,7 +271,7 @@ func (operator Operator) UninstallWaitForDeletion(timeout time.Duration) error {
 	if timeout != 0 {
 		o := operator.Operator
 
-		err = waitForDeletion(kudoClient.Operators(o.Namespace), o.ObjectMeta, timeoutSec)
+		err = waitForDeletion(operator.client.Ctx, kudoClient.Operators(o.Namespace), o.ObjectMeta, timeoutSec)
 		if err != nil {
 			return err
 		}
@@ -284,14 +284,14 @@ type watcher interface {
 	Watch(ctx context.Context, ops metav1.ListOptions) (watch.Interface, error)
 }
 
-func waitForDeletion(watcherInterface watcher, objectMeta metav1.ObjectMeta, timeoutSeconds int64) error {
+func waitForDeletion(ctx context.Context, watcherInterface watcher, objectMeta metav1.ObjectMeta, timeoutSeconds int64) error {
 	listOptions := metav1.ListOptions{
 		ResourceVersion: objectMeta.ResourceVersion,
 		LabelSelector:   labels.SelectorFromSet(objectMeta.Labels).String(),
 		TimeoutSeconds:  &timeoutSeconds,
 	}
 
-	w, err := watcherInterface.Watch(context.TODO(), listOptions)
+	w, err := watcherInterface.Watch(ctx, listOptions)
 	if err != nil {
 		return fmt.Errorf("starting watch of %s/%s with %#v failed: %v",
 			objectMeta.Namespace,

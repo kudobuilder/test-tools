@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +20,7 @@ func CreateNamespace(client client.Client, name string) error {
 	_, err := client.Kubernetes.
 		CoreV1().
 		Namespaces().
-		Create(context.TODO(), &namespace, metav1.CreateOptions{})
+		Create(client.Ctx, &namespace, metav1.CreateOptions{})
 
 	if err != nil {
 		return fmt.Errorf("failed to create namespace %s: %w", name, err)
@@ -37,7 +36,7 @@ func DeleteNamespace(client client.Client, name string) error {
 	err := client.Kubernetes.
 		CoreV1().
 		Namespaces().
-		Delete(context.TODO(), name, options)
+		Delete(client.Ctx, name, options)
 
 	if err != nil {
 		return fmt.Errorf("failed to delete namespace %s: %w", name, err)

@@ -13,6 +13,7 @@ import (
 
 func TestNamespace(t *testing.T) {
 	client := client.Client{
+		Ctx:        context.TODO(),
 		Kubernetes: fake.NewSimpleClientset(),
 	}
 
@@ -21,7 +22,7 @@ func TestNamespace(t *testing.T) {
 	_, err := client.Kubernetes.
 		CoreV1().
 		Namespaces().
-		Get(context.TODO(), namespace, metav1.GetOptions{})
+		Get(client.Ctx, namespace, metav1.GetOptions{})
 	assert.Error(t, err)
 
 	err = DeleteNamespace(client, namespace)
@@ -33,7 +34,7 @@ func TestNamespace(t *testing.T) {
 	_, err = client.Kubernetes.
 		CoreV1().
 		Namespaces().
-		Get(context.TODO(), namespace, metav1.GetOptions{})
+		Get(client.Ctx, namespace, metav1.GetOptions{})
 	assert.NoError(t, err)
 
 	err = DeleteNamespace(client, namespace)
@@ -42,6 +43,6 @@ func TestNamespace(t *testing.T) {
 	_, err = client.Kubernetes.
 		CoreV1().
 		Namespaces().
-		Get(context.TODO(), namespace, metav1.GetOptions{})
+		Get(client.Ctx, namespace, metav1.GetOptions{})
 	assert.Error(t, err)
 }
