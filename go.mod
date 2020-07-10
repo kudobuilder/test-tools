@@ -7,7 +7,7 @@ require (
 	github.com/emicklei/go-restful v2.9.6+incompatible // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
-	github.com/kudobuilder/kudo v0.15.0-rc1
+	github.com/kudobuilder/kudo v0.15.0
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/spf13/afero v1.2.2
