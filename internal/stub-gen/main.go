@@ -24,7 +24,6 @@ import (
 	"github.com/kudobuilder/test-tools/pkg/client"
 )
 
-
 // {{ .Type }} wraps a Kubernetes {{ .Type }}.
 type {{ .Type }} struct {
 	{{ .API | toLower }}.{{ .Type }}
