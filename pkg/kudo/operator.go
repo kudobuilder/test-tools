@@ -11,10 +11,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	kudov1beta1 "github.com/kudobuilder/kudo/pkg/apis/kudo/v1beta1"
 	cmd_install "github.com/kudobuilder/kudo/pkg/kudoctl/cmd/install"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/packages/resolver"
+	"github.com/kudobuilder/kudo/pkg/kudoctl/resources/dependencies"
 	kudooperator "github.com/kudobuilder/kudo/pkg/kudoctl/util/kudo"
 	"github.com/kudobuilder/kudo/pkg/kudoctl/util/repo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,6 +158,11 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 		return Operator{}, fmt.Errorf("failed to resolve operator %s: %w", builder.Name, err)
 	}
 
+	deps, err := dependencies.Resolve(builder.Name, pkg.Resources.OperatorVersion, r)
+	if err != nil {
+		return Operator{}, fmt.Errorf("failed to resolve operator %s dependencies: %w", builder.Name, err)
+	}
+
 	kudoClient := kudooperator.NewClientFromK8s(client.Kudo, client.Kubernetes)
 
 	installOpts := install.Options{
@@ -175,7 +181,8 @@ func (builder OperatorBuilder) Do(client client.Client) (Operator, error) {
 		builder.Namespace,
 		*pkg.Resources,
 		builder.Parameters,
-		r, installOpts)
+		deps,
+		installOpts)
 
 	if err != nil {
 		return Operator{}, fmt.Errorf("failed to install operator %s: %w", builder.Name, err)
@@ -392,6 +399,11 @@ func (builder UpgradeBuilder) Do(operator *Operator) error {
 		return fmt.Errorf("failed to resolve operator %s: %w", name, err)
 	}
 
+	deps, err := dependencies.Resolve(name, pkg.Resources.OperatorVersion, r)
+	if err != nil {
+		return fmt.Errorf("failed to resolve operator %s dependencies: %w", name, err)
+	}
+
 	kudoClient := kudooperator.NewClientFromK8s(operator.client.Kudo, operator.client.Kubernetes)
 
 	err = upgrade.OperatorVersion(
@@ -399,7 +411,7 @@ func (builder UpgradeBuilder) Do(operator *Operator) error {
 		pkg.Resources.OperatorVersion,
 		operator.Instance.Name,
 		builder.Parameters,
-		resolver.New(repository))
+		deps)
 
 	if err != nil {
 		return fmt.Errorf(
